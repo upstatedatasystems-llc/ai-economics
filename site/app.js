@@ -99,6 +99,7 @@
     $("cache").value=Math.round(w.cached_input_fraction*100);
     $("reasoning").value=w.billed_output_multiplier;
     $("custom-box").hidden=id!=="custom";
+    $("extra-tool-cost").value="";
     if(id==="custom")updateCustom();
     recalc();
   }
@@ -121,8 +122,10 @@
     for(const key of Object.keys(data.assumptions)){
       if($(key)) assumptions[key]=number(key,data.assumptions[key].value);
     }
+    const rawTools=$("extra-tool-cost").value.trim();
     return {paid:$("plan").value==="paid",ownership:$("ownership").value,
-      repeats:Math.max(1,Math.round(number("repeats",1))),assumptions};
+      repeats:Math.max(1,Math.round(number("repeats",1))),assumptions,
+      extraToolCost:rawTools===""?null:Number(rawTools)};
   }
   function recalc(){
     if(!data)return;
@@ -132,14 +135,19 @@
       set("side-task",currentSample().name);
       set("side-task-kind",currentSample().kind.toUpperCase());
       set("side-provider",result.provider.name+" · "+result.provider.model_name);
-      set("side-total",money(result.total));set("side-api",money(result.api));
+      const included=result.task_total_if_specified===null?result.total:result.task_total_if_specified;
+      set("side-total",money(included));set("side-api",money(result.api));
       set("side-subscription",money(result.subscription_share));
       set("side-calls",count(result.calls));
       set("side-tokens",count(result.tokens.input+result.tokens.billed_output));
-      set("side-cost-label","Inference + modeled operations / task");
-      set("side-disclaimer",profile.tool_executions>0
-        ?count(profile.tool_executions)+" external tool executions are unpriced. This is NOT a complete task expense."
-        :"This is an illustrative cost model, not a measurement of the provider's actual expenses.");
+      set("side-cost-label",result.tool_cost===null
+        ?"Inference + modeled operations / task"
+        :"Inference, operations + user-entered tool cost / task");
+      set("side-disclaimer",result.tool_cost!==null
+        ?"An extra "+money(result.tool_cost)+" per task was entered by the user. It is not an observed provider charge."
+        :profile.tool_executions>0
+          ?count(profile.tool_executions)+" external tool executions are unpriced. This is NOT a complete task expense."
+          :"This is an illustrative cost model, not a measurement of the provider's actual expenses.");
       const tok=result.tokens;
       set("tokens-input",count(tok.input));set("tokens-cached",count(tok.cached));
       set("tokens-output",count(tok.billed_output));set("tokens-hidden",count(tok.hidden_output));
@@ -153,7 +161,9 @@
         bar.append(seg);
       }
       set("cost-api",money(result.api));set("cost-infra",money(result.infra));
-      set("cost-ops",money(result.ops));set("cost-total",money(result.total));
+      set("cost-ops",money(result.ops));set("cost-tools",
+        result.tool_cost===null?"Unpriced":money(result.tool_cost));
+      set("cost-total",money(included));
       const ranges=core.sensitivity(data,provider,profile,cfg);
       set("cost-low",money(ranges.optimistic));set("cost-base",money(ranges.baseline));
       set("cost-high",money(ranges.conservative));
@@ -161,8 +171,10 @@
       set("personal-calls",count(result.calls*result.repeats));
       set("personal-subscription",money(result.subscription_month));
       set("personal-api",money(result.monthly_api));
-      set("personal-cost",money(result.monthly_serving));
-      set("personal-margin",money(result.monthly_consumer_margin));
+      const includedMonthly=result.monthly_total_if_specified===null
+        ?result.monthly_serving:result.monthly_total_if_specified;
+      set("personal-cost",money(includedMonthly));
+      set("personal-margin",money(result.subscription_month-includedMonthly));
       set("rail-data-status","References "+data.reviewed_at);
       if(step==="scale")renderScale();
     }catch(err){
@@ -304,8 +316,10 @@
         input_tokens:number("input"),output_tokens:number("output"),
         cached_fraction:number("cache")/100,output_multiplier:number("reasoning")
       },
-      estimated_costs:result?{per_task_serving:result.total,api_retail:result.api,
-        monthly_serving:result.monthly_serving}:null,
+      estimated_costs:result?{per_task_model_serving:result.total,
+        external_tools_user_supplied:result.tool_cost,
+        per_task_included_total:result.task_total_if_specified,
+        api_retail:result.api,monthly_model_serving:result.monthly_serving}:null,
       collector_summary:health?health.summary||{}:null,
       research_generated_at:data?data.generated_at:null,
       errors:errors.slice(),privacy:"No pasted prompt/answer text or secrets included"
@@ -324,6 +338,9 @@
       "Billed output: "+Math.round(result.tokens.billed_output)+" tokens",
       "API-equivalent retail: "+money(result.api),
       "Modeled serving subtotal: "+money(result.total),
+      "External tool cost: "+(result.tool_cost===null?"unpriced":money(result.tool_cost)),
+      "Included subtotal: "+money(result.task_total_if_specified===null
+        ?result.total:result.task_total_if_specified),
       "Subscription share: "+money(result.subscription_share),
       "External execution and actual provider spending not known.",
       "https://github.com/upstatedatasystems-llc/ai-economics"
@@ -350,7 +367,7 @@
     $("copy").addEventListener("click",copyEstimate);
     $("download-diagnostics").addEventListener("click",downloadDiagnostics);
     for(const id of ["provider","plan","ownership","model-calls","repeats","input","output",
-      "cache","reasoning","gpu_effective_tokens_s","utilization","fleet_nodes",
+      "cache","reasoning","extra-tool-cost","gpu_effective_tokens_s","utilization","fleet_nodes",
       "operations_fte","fully_loaded_salary_usd","corporate_overhead_fraction"]){
       $(id).addEventListener("input",recalc);
       $(id).addEventListener("change",recalc);
