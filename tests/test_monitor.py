@@ -6,6 +6,7 @@ import unittest
 from urllib.error import HTTPError
 
 from ai_economics import monitor
+from ai_economics.app import load_catalog
 
 
 BASE = b"""<html><head><script>var nonce='random-one';</script></head><body>
@@ -87,6 +88,11 @@ class SourceMonitorTests(unittest.TestCase):
                                clock=lambda:self.at())
         self.assertEqual(result["sources"][1]["status"],"unverifiable")
         self.assertEqual(result["sources"][1]["evidence_count"],0)
+
+    def test_google_unverifiable_pages_are_explicitly_manual(self):
+        sources = {s["id"]: s for s in load_catalog()["sources"]}
+        self.assertEqual(sources["google_plan"]["monitor_mode"], "manual")
+        self.assertEqual(sources["google_api"]["monitor_mode"], "manual")
 
     def test_content_type_gate(self):
         self.assertEqual(monitor.meaningful_evidence(b"%PDF $4.20 per token","application/pdf"),[])
