@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "research" / "catalog.json"
 WORKLOADS = ROOT / "research" / "workloads.json"
 MACRO = ROOT / "research" / "macro.json"
+ACCESS = ROOT / "research" / "access.json"
 DB = ROOT / "var" / "source-monitor.sqlite"
 SITE = ROOT / "site"
 
@@ -67,6 +68,20 @@ def load_macro():
     return data
 
 
+def load_access():
+    data = json.loads(ACCESS.read_text(encoding="utf-8"))
+    if data.get("schema_version") != 1:
+        raise ValueError("unsupported access schema")
+    ids = [p["id"] for p in data["plans"]]
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate subscription tier")
+    providers = {p["id"] for p in load_catalog()["providers"]}
+    for p in data["plans"]:
+        if p["provider_id"] not in providers or p["monthly_usd"] < 0:
+            raise ValueError("invalid access plan")
+    return data
+
+
 def write_json(path: Path, data: dict):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
@@ -93,6 +108,7 @@ def build():
     )
     research["workloads"] = load_workloads()
     research["macro"] = load_macro()
+    research["access"] = load_access()
     research["sample_results"] = {
         p["id"]: estimate(research, p["id"])
         for p in research["providers"]
@@ -121,6 +137,9 @@ def export(target: Path):
     (destination / "data").mkdir(parents=True, exist_ok=True)
     for name in ("index.html", "styles.css", "core.js", "app.js", "favicon.svg"):
         shutil.copy2(SITE / name, destination / name)
+    (destination / "assets").mkdir(exist_ok=True)
+    for name in ("upstate-data-systems-icon.svg", "upstate-data-systems-logo.png"):
+        shutil.copy2(SITE / "assets" / name, destination / "assets" / name)
     for name in ("research.json", "health.json"):
         shutil.copy2(SITE / "data" / name, destination / "data" / name)
     print("Exported " + str(destination))
@@ -145,7 +164,8 @@ def diagnostics(output: Path):
     output.parent.mkdir(parents=True, exist_ok=True)
     assets = {name: (SITE / name).exists() for name in (
         "index.html", "styles.css", "core.js", "app.js", "favicon.svg",
-        "data/research.json", "data/health.json")}
+        "data/research.json", "data/health.json",
+        "assets/upstate-data-systems-icon.svg", "assets/upstate-data-systems-logo.png")}
     try:
         tests = subprocess.run(
             [sys.executable, "-m", "unittest", "discover", "-s", str(ROOT / "tests"), "-v"],
