@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-11-13",
+  "disclaimer": "Illustrative population model. These subscriber counts, activity levels, and API tasks are NOT observed provider usage, guidance, or financial forecasts.",
+  "profiles": {
+    "openai": {
+      "paid_users": 3000000,
+      "free_users": 40000000,
+      "paid_tasks_per_user": 12,
+      "free_tasks_per_user": 14,
+      "api_tasks_per_month": 250000,
+      "paid_profile": "brainstorm",
+      "free_profile": "quick",
+      "api_profile": "coding",
+      "ad_usd_per_free_user_month": 0,
+      "api_realization": 1,
+      "additional_annual_expense_usd": 0
+    },
+    "anthropic": {
+      "paid_users": 1000000,
+      "free_users": 4000000,
+      "paid_tasks_per_user": 12,
+      "free_tasks_per_user": 14,
+      "api_tasks_per_month": 100000,
+      "paid_profile": "brainstorm",
+      "free_profile": "quick",
+      "api_profile": "coding",
+      "ad_usd_per_free_user_month": 0,
+      "api_realization": 1,
+      "additional_annual_expense_usd": 0
+    },
+    "google": {
+      "paid_users": 6000000,
+      "free_users": 90000000,
+      "paid_tasks_per_user": 12,
+      "free_tasks_per_user": 14,
+      "api_tasks_per_month": 400000,
+      "paid_profile": "brainstorm",
+      "free_profile": "quick",
+      "api_profile": "coding",
+      "ad_usd_per_free_user_month": 0,
+      "api_realization": 1,
+      "additional_annual_expense_usd": 0
+    }
+  },
+  "reported_context": [
+    {
+      "provider": "openai",
+      "metric": "Reported September 2026 annualized revenue run rate",
+      "value_usd": 50000000000,
+      "period": "Annualized from September 2026; not actual FY revenue",
+      "type": "press_report",
+      "scope": "OpenAI broad revenue, reporting perimeter may differ across reports",
+      "source_url": "https://www.investing.com/news/stock-market-news/openais-annualized-revenue-20-billion-less-than-previously-signaled-ft-reports-4939854",
+      "note": "Reuters October 8 report says near $50B, versus earlier near $70B under a different definition. Do not equate run rate to audited revenue or use it as a direct numerator for our serving-cost model."
+    },
+    {
+      "provider": "anthropic",
+      "metric": "Reported revenue, nine months to September 30 2026",
+      "value_usd": 33200000000,
+      "period": "Nine months ending 2026-09-30",
+      "type": "regulatory_filing",
+      "scope": "Anthropic combined consumption and subscription revenue",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/2130357/000162828026068676/anthropicpbc-sx1ax1.htm",
+      "note": "Approximate, rounded from $26.3B consumption plus $6.9B subscriptions; not monthly or annual reported revenue."
+    },
+    {
+      "provider": "anthropic",
+      "metric": "Reported compute and infrastructure expense, same nine months",
+      "value_usd": 18808000000,
+      "period": "Nine months ending 2026-09-30",
+      "type": "regulatory_filing",
+      "scope": "Company compute INCLUDING customer serving and model development",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/2130357/000162828026068676/anthropicpbc-sx1ax1.htm",
+      "note": "Includes development and research compute. NOT directly comparable to model-only serving expense, and not an additional expense to add to modeled GPU costs."
+    },
+    {
+      "provider": "google",
+      "metric": "Alphabet Google Cloud revenue, third quarter 2026",
+      "value_usd": 30709000000,
+      "period": "Quarter ending 2026-09-30",
+      "type": "regulatory_filing",
+      "scope": "Google Cloud segment across AI and non-AI products",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1652044/000165204426000084/goog-20260930.htm",
+      "note": "NOT Gemini-only revenue. Google does not report sufficiently separated Gemini App/AI Pro revenue and serving cost for an apples-to-apples comparison."
+    }
+  ],
+  "notes": [
+    "The modeled macro estimates describe a hypothetical AI-serving operation, not real company cash spend or audited revenue.",
+    "User counts are entirely editable hypothetical inputs. Active users do not equal paying subscribers.",
+    "Monthly revenue is paid users × subscription price + free users × assumed ads/user + API task retail value × realization fraction.",
+    "Serving cost is the per-task research model multiplied by assumed monthly paid/free/API task counts.",
+    "Zero in additional business expense means not included, NOT that real companies spend zero on training, R&D, sales or finance.",
+    "Daily = monthly × 12 / 365.25, yearly = monthly × 12. These are normalized rates, not actual historical daily/monthly filings."
+  ]
+}
