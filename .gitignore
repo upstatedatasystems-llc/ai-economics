@@ -13,3 +13,7 @@ site/data/health.json
 dist/
 node_modules/
 .DS_Store
+
+# CI-only browser test output
+playwright-report/
+test-results/
