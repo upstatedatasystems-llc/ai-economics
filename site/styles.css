@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
 :root{color-scheme:dark;--bg:#0b110e;--rail:#101a14;--panel:#111b15;--panel2:#17241b;--field:#1a2a20;--line:#2a4030;--text:#eff7ee;--muted:#94ab9a;--faint:#6f8b77;--green:#73e09b;--green2:#1c5130;--amber:#e7b772;--cyan:#81b7dc;--lavender:#a5a7e7;--shadow:0 10px 40px rgba(0,0,0,.15)}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;min-width:320px;height:100%;background:var(--bg);color:var(--text);font-family:"DM Sans",Inter,system-ui,-apple-system,Segoe UI,sans-serif}
