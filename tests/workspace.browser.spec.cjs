@@ -66,3 +66,22 @@ test('custom prompt remains local and is omitted from downloadable diagnostics',
   expect(diagnostics).not.toContain('NEVER_EXPORT_THIS_PRIVATE_SAMPLE');
   expect(JSON.parse(diagnostics).errors).toEqual([]);
 });
+
+
+test('Continue and Back navigate all steps in a single page',async({page})=>{
+  await page.goto('/');
+  const titles=[
+    'Choose a starting point','Size the work','Estimate the serving cost',
+    'Explore the bigger picture','Verify the evidence'
+  ];
+  for(let i=0;i<titles.length;i++){
+    await expect(page.locator('#stage-title')).toHaveText(titles[i]);
+    if(i<titles.length-1)await page.locator('#next').click();
+  }
+  await expect(page.locator('#next')).toHaveText('Back to start ↺');
+  await page.locator('#next').click();
+  await expect(page.locator('#stage-title')).toHaveText(titles[0]);
+  await page.locator('#next').click();
+  await page.locator('#previous').click();
+  await expect(page.locator('#stage-title')).toHaveText(titles[0]);
+});
