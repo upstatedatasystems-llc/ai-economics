@@ -110,3 +110,19 @@ const mZero=core.macroByTier(catalog,access,examples,{
 near(mZero.month.total_expense,0);
 assert.equal(mZero.provisioned_gpu_systems,0);
 console.log("Subscription allocations and tier-level macro scenarios: passed");
+
+
+const units=require("../site/units.js");
+const presentation=require("../site/explain.js");
+assert.equal(units.ENGLISH_WORDS_PER_TOKEN,.75);
+near(units.amount(720000,"odyssey").equivalents,4.5);
+near(units.amount(240000,"odyssey").equivalents,1.5);
+near(units.amount(1000,"pages").equivalents,3);
+near(units.amount(1000,"words").approxWords,750);
+assert.equal(units.amount(-5,"odyssey"),null);
+assert.equal(units.amount(Number.NaN,"odyssey"),null);
+assert.ok(units.units.length>=5);
+assert.ok(presentation.definitions["model-calls"].includes("inference")||
+  presentation.definitions["model-calls"].includes("model"));
+assert.ok(presentation.definitions["macro-cost-basis"].includes("Provisioned"));
+console.log("Sourced token analogies and field help coverage: passed");
