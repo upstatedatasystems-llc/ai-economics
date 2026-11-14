@@ -498,60 +498,83 @@
     if(mode==="health")renderHealth();
   }
   function downloadDiagnostics(){
-    // Never include text input contents or server credentials.
+    /* Numeric inputs, selected tier IDs, and caught JS errors only.
+       Does NOT include pasted prompt/answer text or browser storage. */
     const report={
-      schema_version:1,generated_at:new Date().toISOString(),app_version:"0.4",
-      current_step:step,selected_example:selected,provider:$("provider").value,
-      plan:$("plan").value,ownership:$("ownership").value,
+      schema_version:2,generated_at:new Date().toISOString(),app_version:"0.5",
+      current_step:step,selected_example:selected,billing_mode:accessMode,
+      selections:data?currentAccessSelections():[],
+      api_provider:$("api-provider").value,ownership:$("ownership").value,
       viewport:{width:window.innerWidth,height:window.innerHeight},
       workload:{
         model_calls:number("model-calls"),tasks_per_month:number("repeats"),
         input_tokens:number("input"),output_tokens:number("output"),
         cached_fraction:number("cache")/100,output_multiplier:number("reasoning")
       },
-      estimated_costs:result?{per_task_model_serving:result.total,
-        external_tools_user_supplied:result.tool_cost,
-        per_task_included_total:result.task_total_if_specified,
-        api_retail:result.api,monthly_model_serving:result.monthly_serving}:null,
-      collector_summary:health?health.summary||{}:null,
+      portfolio:portfolio?{
+        monthly_payment:portfolio.monthly_payment,
+        monthly_api_equivalent:portfolio.monthly_api_equivalent,
+        monthly_modeled_serving:portfolio.monthly_serving,
+        monthly_included_expense:portfolio.monthly_included_cost
+      }:null,
+      macro:macroResult?{
+        provider:macroResult.provider_id,basis:macroResult.cost_basis,
+        monthly_revenue:macroResult.month.revenue,
+        monthly_included_expense:macroResult.month.total_expense
+      }:null,
+      source_summary:health?health.summary||{}:null,
       research_generated_at:data?data.generated_at:null,
-      errors:errors.slice(),privacy:"No pasted prompt/answer text or secrets included"
+      errors:errors.slice(),
+      privacy:"Pasted text, authentication keys, cookies, and personal account details excluded."
     };
     const blob=new Blob([JSON.stringify(report,null,2)],{type:"application/json"});
-    const link=document.createElement("a");
-    const url=URL.createObjectURL(blob);link.href=url;link.download="ai-economics-browser-diagnostics.json";
+    const link=document.createElement("a"),url=URL.createObjectURL(blob);
+    link.href=url;link.download="ai-economics-browser-diagnostics.json";
     document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url);
   }
   function copyEstimate(){
-    if(!result)return;
+    if(!result||!portfolio)return;
     const lines=[
-      "AI Economics v0.4 — illustrative task: "+currentSample().name,
-      "Provider: "+result.provider.name+" / "+result.provider.model_name,
-      "Model calls: "+result.calls+", inputs: "+Math.round(result.tokens.input)+" tokens",
-      "Billed output: "+Math.round(result.tokens.billed_output)+" tokens",
-      "API-equivalent retail: "+money(result.api),
-      "Modeled serving subtotal: "+money(result.total),
-      "External tool cost: "+(result.tool_cost===null?"unpriced":money(result.tool_cost)),
-      "Included subtotal: "+money(result.task_total_if_specified===null
-        ?result.total:result.task_total_if_specified),
-      "Subscription share: "+money(result.subscription_share),
-      "External execution and actual provider spending not known.",
+      "AI Economics v0.5 — illustrative task: "+currentSample().name,
+      "Access: "+(accessMode==="api"?"API":"Subscriptions"),
+      "Selected: "+portfolio.rows.map(p=>p.label+" ("+(p.share*100).toFixed(1)+"%)").join(", "),
+      "Model calls: "+result.calls,
+      "Input: "+Math.round(result.tokens.input)+" tokens",
+      "Billable output: "+Math.round(result.tokens.billed_output)+" tokens",
+      "Monthly work: "+portfolio.total_tasks_month+" tasks",
+      "Monthly amount paid: "+money(portfolio.monthly_payment),
+      "Same work at API retail rates: "+money(portfolio.monthly_api_equivalent),
+      "Modeled monthly serving expense: "+money(portfolio.monthly_serving),
+      "External tool expenses: "+(portfolio.monthly_extra_tool_cost===null
+        ?"not priced":money(portfolio.monthly_extra_tool_cost)),
+      "Not an observed provider margin or guaranteed subscription entitlement.",
       "https://github.com/upstatedatasystems-llc/ai-economics"
     ].join("\n");
     if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(lines).then(()=>set("copy","Copied")).catch(e=>{logError("Copy: "+e.message);set("copy","Copy unavailable");});
-    }else{set("copy","Clipboard unavailable");}
+      navigator.clipboard.writeText(lines).then(()=>set("copy","Copied")).catch(e=>{
+        logError("Copy: "+e.message);set("copy","Copy unavailable");
+      });
+    }else set("copy","Clipboard unavailable");
   }
   function bindEvents(){
-    for(const button of document.querySelectorAll("[data-go]"))button.addEventListener("click",()=>go(button.dataset.go));
-    for(const button of document.querySelectorAll(".evidence-toggle"))button.addEventListener("click",()=>{
-      evidenceTab=button.dataset.evidence;renderEvidence();
-    });
-    for(const button of document.querySelectorAll(".period"))button.addEventListener("click",()=>{
-      period=button.dataset.period;renderScale();
-    });
+    for(const button of document.querySelectorAll("[data-go]"))
+      button.addEventListener("click",()=>go(button.dataset.go));
+    for(const button of document.querySelectorAll(".evidence-toggle"))
+      button.addEventListener("click",()=>{
+        evidenceTab=button.dataset.evidence;renderEvidence();
+      });
+    for(const button of document.querySelectorAll(".period"))
+      button.addEventListener("click",()=>{
+        period=button.dataset.period;renderScale();
+      });
     $("previous").addEventListener("click",()=>go(steps[Math.max(0,steps.indexOf(step)-1)]));
-    $("next").addEventListener("click",()=>go(steps[Math.min(steps.length-1,steps.indexOf(step)+1)]==="evidence"&&step==="evidence"?"task":steps[Math.min(steps.length-1,steps.indexOf(step)+1)]));
+    $("next").addEventListener("click",()=>{
+      const pos=steps.indexOf(step);
+      go(pos===steps.length-1?"task":steps[pos+1]);
+    });
+    $("mode-subscriptions").addEventListener("click",()=>setAccessMode("subscription"));
+    $("mode-api").addEventListener("click",()=>setAccessMode("api"));
+    $("api-provider").addEventListener("change",recalc);
     $("scale-personal").addEventListener("click",()=>{scaleMode="personal";renderScale();});
     $("scale-company").addEventListener("click",()=>{scaleMode="company";renderScale();});
     $("reset").addEventListener("click",()=>choose(selected));
@@ -559,18 +582,18 @@
     $("macro-provider").addEventListener("change",macroDefaults);
     $("copy").addEventListener("click",copyEstimate);
     $("download-diagnostics").addEventListener("click",downloadDiagnostics);
-    for(const id of ["provider","plan","ownership","model-calls","repeats","input","output",
-      "cache","reasoning","extra-tool-cost","gpu_effective_tokens_s","utilization","fleet_nodes",
-      "operations_fte","fully_loaded_salary_usd","corporate_overhead_fraction"]){
+    for(const id of ["ownership","model-calls","repeats","input","output",
+      "cache","reasoning","extra-tool-cost","gpu_effective_tokens_s","utilization",
+      "fleet_nodes","operations_fte","fully_loaded_salary_usd",
+      "corporate_overhead_fraction"]){
       $(id).addEventListener("input",recalc);
       $(id).addEventListener("change",recalc);
     }
-    for(const id of ["question-text","answer-text","context-tokens"]){
+    for(const id of ["question-text","answer-text","context-tokens"])
       $(id).addEventListener("input",()=>{updateCustom();recalc();});
-    }
-    for(const id of ["macro-ownership","macro-paid-users","macro-paid-tasks","macro-free-users",
-      "macro-free-tasks","macro-api-tasks","macro-paid-profile","macro-free-profile",
-      "macro-api-profile","macro-api-realization","macro-ad-arpu","macro-other-annual"]){
+    for(const id of ["macro-ownership","macro-cost-basis","macro-reserve",
+      "macro-api-customers","macro-api-tasks-per-customer","macro-api-profile",
+      "macro-api-realization","macro-ad-arpu","macro-other-annual"]){
       $(id).addEventListener("input",renderScale);
       $(id).addEventListener("change",renderScale);
     }
@@ -581,7 +604,7 @@
       const response=await fetch("./data/research.json",{cache:"no-store"});
       if(!response.ok)throw Error("Research snapshot missing. Run the Python build command.");
       data=await response.json();
-      if(data.schema_version!==1||!data.workloads||!data.macro)throw Error("Unsupported snapshot. Rebuild with current code.");
+      if(data.schema_version!==1||!data.workloads||!data.macro||!data.access)throw Error("Unsupported snapshot. Rebuild with current code.");
       samples=data.workloads.examples;
       initProviderSelect();
       for(const [key,meta] of Object.entries(data.assumptions)){
@@ -590,6 +613,7 @@
       loadSamples();
       bindEvents();
       initMacro();
+      initAccess();
       renderSources();
       set("reviewed",data.reviewed_at);
       for(let i=0;i<steps.length;i++)$("progress-dots").append(element("i",""));
