@@ -453,3 +453,21 @@ html,body,#app{background:#0f1215}
  .metric-help-tooltip{font-size:12px}
 }
 @media(prefers-reduced-motion:reduce){.compare-fill{transition:none}}
+
+
+/* Keep unit selector available even when the right column collapses on phones. */
+@media(max-width:870px){
+ .workspace{grid-template-rows:62px 174px minmax(0,1fr)}
+ .insight{grid-template-rows:auto 1fr 44px}
+ .insight .token-reference{display:flex;grid-column:1/-1;grid-row:3;align-items:center;
+   margin:0;padding:5px 9px;gap:9px;border-radius:7px;min-height:38px;overflow:hidden}
+ .insight .token-reference label{font-size:9px;white-space:nowrap}
+ .insight .token-reference select{min-width:120px;max-width:190px;min-height:29px;padding:4px 6px;font-size:11px}
+ .insight .token-reference .token-value{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .insight .token-reference>small{display:none}
+}
+@media(max-width:580px){
+ .insight .token-reference label{display:none}
+ .insight .token-reference select{flex:0 0 45%;min-width:0}
+ .insight .token-reference .token-value{flex:1}
+}
