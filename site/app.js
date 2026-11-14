@@ -283,6 +283,15 @@
     set("cost-value-status",accessMode==="api"
       ?"Under API billing, the modeled token bill is paid per use; the provider may still incur separate internal costs. The gap here does not represent an additional user benefit."
       :"For "+money(portfolio.monthly_payment)+" in monthly subscription fees, this example's workload would have a published API-retail equivalent of "+money(portfolio.monthly_api_equivalent)+". The difference is not guaranteed plan savings, usage entitlement, or provider loss.");
+    const unitRetail=portfolio.per_task_api_equivalent;
+    const breakEven=unitRetail>0?Math.ceil(portfolio.monthly_payment/unitRetail):null;
+    set("access-interpretation",accessMode==="api"
+      ?"Under API billing you pay for estimated token usage: "+money(portfolio.monthly_payment)+"/month. This is separate from the provider's modeled serving expense of "+money(portfolio.monthly_serving)+"."
+      :portfolio.monthly_payment===0
+        ?"No subscription payment is assumed. The work still has a hypothetical serving expense, and free access can be subject to usage limits."
+        :"At this task mix, approximately "+(breakEven===null?"no finite number of":count(breakEven))+
+          " completed tasks would have API-retail charges comparable to your "+money(portfolio.monthly_payment)+
+          " in monthly subscription fees. This is an illustrative price comparison, not a guaranteed allowance or evidence of a provider loss.");
     const root=$("access-comparison");root.replaceChildren();
     for(const r of portfolio.rows){
       const line=element("div","sub-result");
