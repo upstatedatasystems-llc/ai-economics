@@ -142,7 +142,7 @@ def export(target):
     if out.resolve() == SITE.resolve():
         raise ValueError("destination must differ from source")
     (out / "data").mkdir(parents=True, exist_ok=True)
-    for name in ("index.html", "styles.css", "app.js"):
+    for name in ("index.html", "styles.css", "core.js", "app.js"):
         shutil.copy2(SITE / name, out / name)
     for name in ("research.json", "health.json"):
         shutil.copy2(SITE / "data" / name, out / "data" / name)
