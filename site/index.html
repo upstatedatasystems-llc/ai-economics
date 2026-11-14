@@ -16,10 +16,9 @@
   <div id="app">
     <header class="topbar">
       <a class="identity" href="https://upstatedatasystems.com/" aria-label="Upstate Data Systems home">
-        <span class="brand-mark">U<span class="brand-dot"></span></span>
-        <span class="brand-text"><strong>UPSTATE</strong><small>DATA SYSTEMS</small></span>
+        <img class="brand-icon-official" src="./assets/upstate-data-systems-icon.svg" alt="" width="38" height="38"><span class="brand-text"><strong>UPSTATE</strong><small>DATA SYSTEMS</small></span>
       </a>
-      <span class="project-name"><span class="project-separator">/</span> AI Economics <span class="app-version">Research preview · v0.4</span></span>
+      <span class="project-name"><span class="project-separator">/</span> AI Economics <span class="app-version">Research preview · v0.5</span></span>
       <div class="top-actions">
         <span class="live-indicator"><span></span> Offline-first simulator</span>
         <button id="download-diagnostics" class="icon-button" type="button" title="Download privacy-safe browser diagnostics">Diagnostics</button>
@@ -35,18 +34,20 @@
         </div>
         <nav class="steps" aria-label="Estimator navigation">
           <button type="button" class="step selected" data-go="task"><span class="step-index">01</span><span><strong>Choose task</strong><small>A recognizable starting point</small></span></button>
-          <button type="button" class="step" data-go="usage"><span class="step-index">02</span><span><strong>Size the work</strong><small>Calls, tokens, and tools</small></span></button>
-          <button type="button" class="step" data-go="economics"><span class="step-index">03</span><span><strong>Estimate cost</strong><small>Pricing and infrastructure</small></span></button>
-          <button type="button" class="step" data-go="scale"><span class="step-index">04</span><span><strong>Explore scale</strong><small>Monthly and company-wide</small></span></button>
-          <button type="button" class="step" data-go="evidence"><span class="step-index">05</span><span><strong>Inspect evidence</strong><small>Sources and uncertainty</small></span></button>
+          <button type="button" class="step" data-go="access"><span class="step-index">02</span><span><strong>Choose access</strong><small>Subscription(s) or API</small></span></button>
+          <button type="button" class="step" data-go="usage"><span class="step-index">03</span><span><strong>Size the work</strong><small>Calls, tokens, and tools</small></span></button>
+          <button type="button" class="step" data-go="economics"><span class="step-index">04</span><span><strong>Estimate cost</strong><small>Pricing and infrastructure</small></span></button>
+          <button type="button" class="step" data-go="scale"><span class="step-index">05</span><span><strong>Explore scale</strong><small>Monthly and company-wide</small></span></button>
+          <button type="button" class="step" data-go="evidence"><span class="step-index">06</span><span><strong>Inspect evidence</strong><small>Sources and uncertainty</small></span></button>
         </nav>
         <div class="rail-bottom">
+          <div class="rail-logo"><img src="./assets/upstate-data-systems-logo.png" alt="Upstate Data Systems" loading="lazy"></div>
           <div class="rail-info"><span class="data-dot"></span><span id="rail-data-status">Loading source status</span></div>
           <a href="https://github.com/upstatedatasystems-llc/ai-economics/blob/main/docs/METHODOLOGY.md" target="_blank" rel="noopener noreferrer">Read methodology ↗</a>
         </div>
       </aside>
       <div class="center">
-        <div class="main-header"><div><span class="stage-caption" id="stage-caption">STEP 01 OF 05</span><h2 id="stage-title">Choose a starting point</h2><p id="stage-description">Start with a familiar task, then adjust the workload until it resembles your own.</p></div><span class="stage-pager" id="stage-pager">01 / 05</span></div>
+        <div class="main-header"><div><span class="stage-caption" id="stage-caption">STEP 01 OF 06</span><h2 id="stage-title">Choose a starting point</h2><p id="stage-description">Start with a familiar task, then adjust the workload until it resembles your own.</p></div><span class="stage-pager" id="stage-pager">01 / 06</span></div>
         <div class="stage-scroll" id="stage-scroll">
           <div id="loading" class="loading"><span class="loader"></span>Loading the research snapshot…</div>
           <div id="error" class="error" role="alert" hidden></div>
@@ -61,6 +62,32 @@
                 <div class="quote" id="chosen-prompt"></div>
                 <div class="shape-row"><span><strong id="chosen-turns">—</strong><small>User turns</small></span><span><strong id="chosen-calls">—</strong><small>Model calls</small></span><span><strong id="chosen-tools">—</strong><small>Tool executions*</small></span></div>
               </article>
+            </section>
+            <section class="screen" data-screen="access" aria-label="Choose subscription or API" hidden>
+              <div class="info-card access-intro">First choose <strong>how the AI work is billed.</strong> A subscription is a fixed monthly payment; API calls are typically billed by token. We'll compare both against exactly the same modeled workload.</div>
+              <div class="view-toggle" role="group" aria-label="AI billing method">
+                <button id="mode-subscriptions" class="toggle selected" type="button">Consumer subscriptions</button>
+                <button id="mode-api" class="toggle" type="button">API pay-as-you-go</button>
+              </div>
+              <div id="subscriptions-access">
+                <div class="split-head"><h3>Which subscriptions are you paying for?</h3><span class="tag">One plan per provider</span></div>
+                <div id="subscription-selections" class="subscription-selections"></div>
+                <div class="info-card">If you have multiple subscriptions, allocate your monthly tasks between them using the <strong>workload share</strong> field. Shares are normalized to 100%, so no task is counted twice. The subscription fees are added once per plan.</div>
+              </div>
+              <div id="api-access" hidden>
+                <div class="form-grid"><label>API provider<select id="api-provider"></select></label>
+                  <div class="info-card">API billing is usage-based, not included in a ChatGPT Plus, Claude Pro, or Google AI Pro subscription. This model uses published text-token list prices, not negotiated rates or additional tool fees.</div>
+                </div>
+              </div>
+              <div class="split-head"><h3 id="access-breakdown-heading">Monthly billing comparison</h3><span class="tag">Illustrative workload</span></div>
+              <div class="figure-grid access-figures">
+                <div><small id="access-paid-label">Subscriptions you pay</small><strong id="access-monthly-paid">—</strong></div>
+                <div><small>Same work at published API rates</small><strong id="access-api-value">—</strong></div>
+                <div><small>Research-modeled serving expense</small><strong id="access-serving">—</strong></div>
+                <div><small>API retail minus amount paid</small><strong id="access-retail-gap">—</strong></div>
+              </div>
+              <div id="access-comparison" class="subscription-results"></div>
+              <p class="note muted">API-retail equivalent is a price comparison—not a guarantee your subscription includes this usage. Real limits, bundled features, non-text tools and model routing differ across tiers.</p>
             </section>
             <section class="screen" data-screen="usage" aria-label="Size the work" hidden>
               <div class="explain-line">A single visible question may involve many model calls. Count the full task, including repeated context and tool results.</div>
@@ -84,11 +111,11 @@
             </section>
             <section class="screen" data-screen="economics" aria-label="Estimate cost" hidden>
               <div class="form-grid three">
-                <label>Provider / API comparator<select id="provider"></select></label>
-                <label>Consumer tier<select id="plan"><option value="paid">Paid subscription</option><option value="free">Free (no direct plan revenue)</option></select></label>
-                <label>Infrastructure model<select id="ownership"><option value="cloud">Rented 8× H100 proxy</option><option value="owned">Owned eight-GPU proxy</option></select></label>
+                <label>Serving infrastructure scenario<select id="ownership"><option value="cloud">Rented eight-H100 cloud proxy</option><option value="owned">Owned eight-GPU proxy</option></select></label>
+                <div class="info-card">Billing selections are made in <strong>Choose access</strong>. This step estimates delivering the work—not the actual proprietary expense of OpenAI, Anthropic or Google.</div>
               </div>
-              <div class="cost-stack"><div class="cost-row"><span>Public API retail equivalent<small>Token rates × modeled calls</small></span><strong id="cost-api">—</strong></div>
+              <div class="info-card" id="cost-value-status">Comparing your selected access method with the research scenario.</div>
+              <div class="cost-stack"><div class="cost-row"><span>Public API retail equivalent<small>Same task, weighted by your access choices</small></span><strong id="cost-api">—</strong></div>
                 <div class="cost-row"><span>Modeled GPU serving expense<small>Allocated compute capacity</small></span><strong id="cost-infra">—</strong></div>
                 <div class="cost-row"><span>Modeled operations / administration<small>Hypothetical personnel allocation</small></span><strong id="cost-ops">—</strong></div>
                 <div class="cost-row"><span>External tools, CI, hosted execution<small>Unpriced unless explicitly entered</small></span><strong id="cost-tools">Unpriced</strong></div>
@@ -113,37 +140,62 @@
             <section class="screen" data-screen="scale" aria-label="Explore scale" hidden>
               <div class="view-toggle" role="group" aria-label="Scale mode"><button id="scale-personal" class="toggle selected" data-mode="personal" type="button">Your monthly usage</button><button id="scale-company" class="toggle" data-mode="company" type="button">Company-wide scenario</button></div>
               <div id="personal-view">
-                <p class="muted intro">Repeat this completed task for a month. A paid subscription is a fixed fee—its per-task share is an accounting allocation, not a marginal charge.</p>
+                <p class="muted intro">Repeat this completed task for a month, allocating the work across the selected plans or API provider. Paying a subscription is a fixed monthly cost, not a charge per message.</p>
                 <div class="figure-grid">
                   <div><small>Completed tasks / month</small><strong id="personal-tasks">—</strong></div><div><small>Model calls / month</small><strong id="personal-calls">—</strong></div>
-                  <div><small>Gross subscription</small><strong id="personal-subscription">—</strong></div><div><small>Equivalent API retail</small><strong id="personal-api">—</strong></div>
-                  <div><small>Modeled serving total</small><strong id="personal-cost">—</strong></div><div><small>Revenue less serving subtotal*</small><strong id="personal-margin">—</strong></div>
-                </div><p class="note muted">*Not a measured provider profit or subsidy; other services, R&D, non-text tools, fees and actual model routing remain unknown.</p>
+                  <div><small id="personal-paid-label">What you pay / month</small><strong id="personal-subscription">—</strong></div><div><small>Equivalent API retail</small><strong id="personal-api">—</strong></div>
+                  <div><small>Modeled serving total</small><strong id="personal-cost">—</strong></div><div><small>API retail equivalent minus amount paid</small><strong id="personal-margin">—</strong></div>
+                </div><p class="note muted">*API retail minus payment is a consumer comparison, not provider profit. Actual model routing, plan usage limits, external tools and bundled features can change the result.</p>
               </div>
               <div id="company-view" hidden>
-                <div class="form-grid three compact">
-                  <label>Provider<select id="macro-provider"></select></label>
-                  <label>Infrastructure<select id="macro-ownership"><option value="cloud">Rented</option><option value="owned">Owned</option></select></label>
+                <div class="info-card">This is a <strong>hypothetical provider-scale operation</strong>, not actual company spending. Adjust the number of users in each plan, their task frequency, and API customers. The result shows how modeled revenue might cover modeled capacity and overhead.</div>
+                <div class="form-grid three compact macro-main-controls">
+                  <label>Company / API price reference<select id="macro-provider"></select></label>
+                  <label>Infrastructure<select id="macro-ownership"><option value="cloud">Cloud rented</option><option value="owned">Owned hardware</option></select></label>
                   <label>Timeframe<div class="mini-toggle"><button type="button" class="period selected" data-period="day">Day</button><button type="button" class="period" data-period="month">Month</button><button type="button" class="period" data-period="year">Year</button></div></label>
+                  <label>Cost approach<select id="macro-cost-basis"><option value="usage">Usage-allocated expense</option><option value="capacity">Provisioned fleet expense</option></select></label>
+                  <label>Spare capacity (% of requirement)<input id="macro-reserve" type="number" min="0" max="100" step="5" value="20"></label>
                 </div>
-                <div class="macro-figures"><div><small>Gross modeled revenue</small><strong id="macro-revenue">—</strong></div><div><small>Modeled serving</small><strong id="macro-serving">—</strong></div><div><small>Additional business expenses</small><strong id="macro-extra">Not modeled</strong></div><div><small>Revenue less included costs</small><strong id="macro-balance">—</strong></div></div>
-                <details class="settings" id="macro-settings"><summary>Adjust hypothetical population and spending <span>Editable assumptions</span></summary>
+                <div class="macro-figures">
+                  <div><small>Modeled gross revenue</small><strong id="macro-revenue">—</strong></div>
+                  <div><small>Total modeled expense included</small><strong id="macro-total-expense">—</strong></div>
+                  <div><small>Modeled infrastructure</small><strong id="macro-infra">—</strong></div>
+                  <div><small>Modeled operations / admin</small><strong id="macro-ops">—</strong></div>
+                  <div><small>Other expense assumption</small><strong id="macro-extra">Not modeled</strong></div>
+                  <div><small>Revenue less included expense</small><strong id="macro-balance">—</strong></div>
+                </div>
+                <div class="coverage">
+                  <div class="split-head"><h3>Can revenue offset modeled expense?</h3><strong id="macro-coverage">—</strong></div>
+                  <div class="coverage-track"><div id="macro-coverage-fill"></div></div>
+                  <p id="macro-coverage-note" class="note muted"></p>
+                </div>
+                <div class="split-head"><h3>Customers by subscription tier</h3><span class="tag">Edit users + activity</span></div>
+                <div id="macro-tier-rows" class="macro-tier-rows"></div>
+                <div class="macro-api-card">
+                  <h3>Business API customers</h3>
                   <div class="form-grid three">
-                    <label>Paying subscribers<input id="macro-paid-users" type="number" min="0" max="1000000000" step="100000"></label>
-                    <label>Paid tasks / subscriber / month<input id="macro-paid-tasks" type="number" min="0" max="10000" step="1"></label>
-                    <label>Representative paid task<select id="macro-paid-profile"></select></label>
-                    <label>Active free users<input id="macro-free-users" type="number" min="0" max="1000000000" step="100000"></label>
-                    <label>Free tasks / user / month<input id="macro-free-tasks" type="number" min="0" max="10000" step="1"></label>
-                    <label>Representative free task<select id="macro-free-profile"></select></label>
-                    <label>API tasks / month<input id="macro-api-tasks" type="number" min="0" max="1000000000" step="1000"></label>
-                    <label>Representative API task<select id="macro-api-profile"></select></label>
-                    <label>Effective API retail realized (%)<input id="macro-api-realization" type="number" min="0" max="100" step="5"></label>
-                    <label>Assumed ads / free user / month ($)<input id="macro-ad-arpu" type="number" min="0" max="1000" step=".1"></label>
-                    <label>Other business expense / year ($)<input id="macro-other-annual" type="number" min="0" max="1000000000000" step="100000"></label>
-                  </div><button id="macro-reset" type="button" class="subtle-button">Restore illustrative defaults</button>
+                    <label>API customers<input id="macro-api-customers" type="number" min="0" max="1000000000" step="100"></label>
+                    <label>Tasks / customer / month<input id="macro-api-tasks-per-customer" type="number" min="0" max="10000" step="1"></label>
+                    <label>Representative task<select id="macro-api-profile"></select></label>
+                    <label>Public API price collected (%)<input id="macro-api-realization" type="number" min="0" max="100" step="5"></label>
+                  </div>
+                </div>
+                <details class="settings" id="macro-settings"><summary>More revenue and company expenses <span>Additional assumptions</span></summary>
+                  <div class="form-grid">
+                    <label>Assumed advertising / free user / month ($)<input id="macro-ad-arpu" type="number" min="0" max="1000" step=".1"></label>
+                    <label>Additional company expense / year ($)<input id="macro-other-annual" type="number" min="0" max="1000000000000" step="100000"></label>
+                  </div>
+                  <button id="macro-reset" type="button" class="subtle-button">Restore illustrative company defaults</button>
                 </details>
-                <div class="stats-strip macro-counts"><span><small>Modeled tasks / month</small><strong id="macro-tasks">—</strong></span><span><small>Model calls / month</small><strong id="macro-calls">—</strong></span><span><small>8-GPU systems (average)*</small><strong id="macro-nodes">—</strong></span></div>
-                <p class="muted note">All population defaults are hypothetical. No company subscriber counts, actual infrastructure utilization, or accounting profit are inferred. *Ignores peak demand, redundancy and geography.</p>
+                <div class="split-head"><h3>Modeled segment economics</h3><span class="tag">Same timeframe as above</span></div>
+                <div id="macro-segment-results" class="macro-segment-results"></div>
+                <div class="stats-strip macro-counts">
+                  <span><small>Completed tasks / month</small><strong id="macro-tasks">—</strong></span>
+                  <span><small>Model calls / month</small><strong id="macro-calls">—</strong></span>
+                  <span><small>Average 8-GPU equivalents</small><strong id="macro-nodes">—</strong></span>
+                  <span><small>Provisioned 8-GPU systems</small><strong id="macro-provisioned">—</strong></span>
+                </div>
+                <p class="muted note">The capacity-budget view assumes continuous provision of full eight-GPU system-months with a spare capacity allowance; the usage-allocated view prices only modeled used capacity. They are <strong>alternatives, not additive</strong>. Training, R&D and many other real costs are excluded unless explicitly entered. Owned-hardware depreciation is an accounting allocation, not a cash outlay.</p>
               </div>
             </section>
             <section class="screen" data-screen="evidence" aria-label="Inspect evidence" hidden>
@@ -159,8 +211,8 @@
       <aside class="insight" aria-label="Live cost summary">
         <div class="insight-head"><span class="eyebrow">LIVE ESTIMATE</span><span class="signal"><span></span> Scenario</span></div>
         <div class="insight-profile"><small id="side-task-kind">MODELLED WORKLOAD</small><h2 id="side-task">Everyday question</h2><span id="side-provider" class="side-model">—</span></div>
-        <div class="hero-metric"><div class="metric-title">MODELED SERVING COST <span> / task</span></div><strong id="side-total">—</strong><small id="side-cost-label">Inference and operations only</small></div>
-        <div class="side-figures"><div><span>API retail equivalent</span><strong id="side-api">—</strong></div><div><span>Subscription allocation</span><strong id="side-subscription">—</strong></div><div><span>Model calls in task</span><strong id="side-calls">—</strong></div><div><span>Token quantity (billed)</span><strong id="side-tokens">—</strong></div></div>
+        <div class="hero-metric"><div class="metric-title">MODELED TASK EXPENSE <span> / task</span></div><strong id="side-total">—</strong><small id="side-cost-label">Inference and operations only</small></div>
+        <div class="side-figures"><div><span>API retail equivalent</span><strong id="side-api">—</strong></div><div><span>Payment allocated per task</span><strong id="side-subscription">—</strong></div><div><span>Model calls in task</span><strong id="side-calls">—</strong></div><div><span>Token quantity (billed)</span><strong id="side-tokens">—</strong></div></div>
         <div class="side-explain"><div class="explain-symbol">!</div><p id="side-disclaimer">Model-based scenario, not measured provider spending. External tool charges may be excluded.</p></div>
         <div class="side-actions"><button type="button" id="copy" class="subtle-button full">Copy estimate</button><button type="button" id="reset" class="text-button">Reset current example</button></div>
         <div class="side-bottom"><span>Reviewed baseline</span><strong id="reviewed">—</strong></div>
