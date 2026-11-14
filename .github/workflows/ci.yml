@@ -27,3 +27,31 @@ jobs:
           test -s dist/ai-economics/index.html
           test -s dist/ai-economics/core.js
           node tests/test_core.js
+
+  browser:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install CI-only browser runner
+        run: npm install --no-package-lock --no-audit --no-fund
+      - name: Install headless Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test guided desktop and mobile workflows
+        run: npm run test:browser
+      - name: Upload browser traces if tests fail
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-economics-browser-traces
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
