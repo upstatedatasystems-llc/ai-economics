@@ -298,41 +298,95 @@
   }
 
   function initMacro(){
-    for(const id of ["macro-paid-profile","macro-free-profile","macro-api-profile"]){
-      for(const p of samples.filter(w=>w.id!=="custom")){
-        const option=element("option","",p.name);option.value=p.id;$(id).append(option);
-      }
+    for(const p of samples.filter(w=>w.id!=="custom")){
+      const opt=element("option","",p.name);opt.value=p.id;
+      $("macro-api-profile").append(opt);
     }
     macroDefaults();
   }
+
+  function populateMacroTiers(providerId){
+    const root=$("macro-tier-rows");root.replaceChildren();
+    const prior=data.macro.profiles[providerId];
+    const paidDefault={openai:"openai-plus",anthropic:"anthropic-pro",google:"google-pro"}[providerId];
+    const base=data.access.plans.filter(p=>p.provider_id===providerId);
+    for(const plan of base){
+      const isFree=plan.monthly_usd===0;
+      const isMainPaid=plan.id===paidDefault;
+      const defaultUsers=isFree?prior.free_users:isMainPaid?prior.paid_users:0;
+      const defaultRate=isFree?prior.free_tasks_per_user:prior.paid_tasks_per_user;
+      const profileId=isFree?prior.free_profile:prior.paid_profile;
+      const row=element("div","tier-editor");row.dataset.plan=plan.id;
+      const head=element("div");head.append(element("h4","",plan.name),
+        element("span","price-caption",money(plan.monthly_usd)+"/user/month"));
+      const usersLabel=element("label","", "Users");
+      const users=element("input");users.type="number";users.min="0";users.max="1000000000";
+      users.step="1000";users.value=String(defaultUsers);users.id="macro-users-"+plan.id;
+      usersLabel.append(users);
+      const rateLabel=element("label","", "Tasks / user / month");
+      const rate=element("input");rate.type="number";rate.min="0";rate.max="10000";
+      rate.step="1";rate.value=String(defaultRate);rate.id="macro-rate-"+plan.id;
+      rateLabel.append(rate);
+      const profileLabel=element("label","", "Typical task");
+      const select=element("select");select.id="macro-profile-"+plan.id;
+      for(const sample of samples.filter(w=>w.id!=="custom")){
+        const option=element("option","",sample.name);
+        option.value=sample.id;select.append(option);
+      }
+      select.value=profileId;
+      profileLabel.append(select);
+      row.append(head,usersLabel,rateLabel,profileLabel);
+      root.append(row);
+      for(const control of [users,rate,select]){
+        control.addEventListener("input",renderScale);
+        control.addEventListener("change",renderScale);
+      }
+    }
+  }
+
   function macroDefaults(){
-    const d=data.macro.profiles[$("macro-provider").value];if(!d)return;
-    const vals={
-      "macro-paid-users":d.paid_users,"macro-paid-tasks":d.paid_tasks_per_user,
-      "macro-free-users":d.free_users,"macro-free-tasks":d.free_tasks_per_user,
-      "macro-api-tasks":d.api_tasks_per_month,"macro-ad-arpu":d.ad_usd_per_free_user_month,
+    const id=$("macro-provider").value;
+    const d=data.macro.profiles[id];
+    if(!d)return;
+    populateMacroTiers(id);
+    const tasksPer=25;
+    const fields={
+      "macro-api-customers":Math.ceil(d.api_tasks_per_month/tasksPer),
+      "macro-api-tasks-per-customer":tasksPer,
+      "macro-api-profile":d.api_profile,
       "macro-api-realization":d.api_realization*100,
+      "macro-ad-arpu":d.ad_usd_per_free_user_month,
       "macro-other-annual":d.additional_annual_expense_usd,
-      "macro-paid-profile":d.paid_profile,"macro-free-profile":d.free_profile,
-      "macro-api-profile":d.api_profile
+      "macro-reserve":20,
+      "macro-cost-basis":"usage"
     };
-    for(const [id,value] of Object.entries(vals))$(id).value=value;
+    for(const [key,v] of Object.entries(fields))$(key).value=v;
     renderScale();
   }
+
   function macroConfig(){
+    const provider=$("macro-provider").value;
+    const plans=data.access.plans.filter(p=>p.provider_id===provider);
     return {
-      paid_users:number("macro-paid-users"),free_users:number("macro-free-users"),
-      paid_tasks_per_user:number("macro-paid-tasks"),free_tasks_per_user:number("macro-free-tasks"),
-      api_tasks_per_month:number("macro-api-tasks"),
-      paid_profile:$("macro-paid-profile").value,
-      free_profile:$("macro-free-profile").value,
-      api_profile:$("macro-api-profile").value,
-      ad_usd_per_free_user_month:number("macro-ad-arpu"),
+      provider_id:provider,ownership:$("macro-ownership").value,
+      cost_basis:$("macro-cost-basis").value,
+      reserve_fraction:number("macro-reserve")/100,
+      tiers:plans.map(p=>({
+        plan_id:p.id,
+        users:number("macro-users-"+p.id),
+        tasks_per_user:number("macro-rate-"+p.id),
+        profile_id:$("macro-profile-"+p.id).value
+      })),
+      api_customers:number("macro-api-customers"),
+      api_tasks_per_customer:number("macro-api-tasks-per-customer"),
+      api_profile_id:$("macro-api-profile").value,
       api_realization:number("macro-api-realization")/100,
+      ad_usd_per_free_user_month:number("macro-ad-arpu"),
       additional_annual_expense_usd:number("macro-other-annual"),
-      ownership:$("macro-ownership").value
+      assumptions:settings().assumptions
     };
   }
+
   function renderScale(){
     if(!data||!data.macro)return;
     $("personal-view").hidden=scaleMode!=="personal";
@@ -343,21 +397,51 @@
     $("scale-company").setAttribute("aria-pressed",String(scaleMode==="company"));
     if(scaleMode==="company"){
       try{
-        macroResult=core.macro(data,$("macro-provider").value,samples,macroConfig());
+        const cfg=macroConfig();
+        macroResult=core.macroByTier(data,data.access,samples,cfg);
         const p=macroResult[period];
-        set("macro-revenue",money(p.revenue));set("macro-serving",money(p.serving_cost));
+        set("macro-revenue",money(p.revenue));
+        set("macro-total-expense",money(p.total_expense));
+        set("macro-infra",money(p.infrastructure));
+        set("macro-ops",money(p.operations));
         set("macro-extra",p.other_expense===0?"Not modeled":money(p.other_expense));
         set("macro-balance",money(p.estimated_balance));
-        set("macro-tasks",count(macroResult.paid_tasks_month+macroResult.free_tasks_month+macroResult.api_tasks_month));
-        set("macro-calls",count(macroResult.total_model_calls_month));
-        set("macro-nodes",count(Math.ceil(macroResult.eight_gpu_systems_required)));
-      }catch(err){logError("Macro: "+String(err.message||err));set("macro-revenue","Check inputs");}
+        set("macro-tasks",count(macroResult.total_tasks_month));
+        set("macro-calls",count(macroResult.model_calls_month));
+        set("macro-nodes",count(macroResult.estimated_gpu_systems.toFixed(2)));
+        set("macro-provisioned",count(macroResult.provisioned_gpu_systems));
+        const ratio=macroResult.revenue_to_expense_ratio;
+        set("macro-coverage",ratio===null?"n/a":(100*ratio).toFixed(0)+"%");
+        $("macro-coverage-fill").style.width=ratio===null?"0%":(100*Math.min(1,ratio)).toFixed(1)+"%";
+        set("macro-coverage-note",ratio===null
+          ?"No modeled expenses were included, so revenue coverage is undefined."
+          :ratio<1
+            ?"Illustrative revenue covers "+(100*ratio).toFixed(1)+"% of included modeled expense; the remaining gap is "+money(-p.estimated_balance)+"."
+            :"Illustrative revenue exceeds included modeled expense by "+money(p.estimated_balance)+". This does not establish actual profit; training and other real expenses may be missing.");
+        const segment=$("macro-segment-results");segment.replaceChildren();
+        const fraction=period==="day"?12/365.25:period==="year"?12:1;
+        for(const item of macroResult.tier_rows){
+          if(item.users===0&&item.tasks_month===0)continue;
+          const entry=element("div","segment-item");
+          const title=element("strong","",item.name);
+          const revenue=element("span");revenue.append(element("small","", "Gross revenue"),document.createTextNode(money(item.revenue*fraction)));
+          const cost=element("span");cost.append(element("small","", "Usage-allocated serving"),document.createTextNode(money(item.serving*fraction)));
+          entry.append(title,revenue,cost);
+          segment.append(entry);
+        }
+        if(!segment.children.length)segment.append(element("div","info-card","No user segments have been assigned."));
+      }catch(err){
+        logError("Macro: "+String(err.message||err));
+        set("macro-revenue","Check inputs");
+      }
     }
     document.querySelectorAll(".period").forEach(button=>{
       const active=button.dataset.period===period;
-      button.classList.toggle("selected",active);button.setAttribute("aria-pressed",String(active));
+      button.classList.toggle("selected",active);
+      button.setAttribute("aria-pressed",String(active));
     });
   }
+
   function renderSources(){
     const root=$("sources");root.replaceChildren();
     for(const s of data.sources){
