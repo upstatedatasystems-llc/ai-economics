@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-11-14",
+  "currency": "USD",
+  "description": "US consumer list-price examples, no taxes or promotions. Plan capabilities, limits and model routing vary. API usage is separately billed.",
+  "plans": [
+    {
+      "id": "openai-free",
+      "provider_id": "openai",
+      "name": "ChatGPT Free",
+      "monthly_usd": 0,
+      "source_url": "https://chatgpt.com/pricing/"
+    },
+    {
+      "id": "openai-go",
+      "provider_id": "openai",
+      "name": "ChatGPT Go",
+      "monthly_usd": 8,
+      "source_url": "https://openai.com/index/introducing-chatgpt-go/"
+    },
+    {
+      "id": "openai-plus",
+      "provider_id": "openai",
+      "name": "ChatGPT Plus",
+      "monthly_usd": 20,
+      "source_url": "https://help.openai.com/en/articles/6950777-what-is-chatgpt-plus"
+    },
+    {
+      "id": "openai-pro100",
+      "provider_id": "openai",
+      "name": "ChatGPT Pro 100",
+      "monthly_usd": 100,
+      "source_url": "https://help.openai.com/en/articles/9793128-about-chatgpt-pro-tiers"
+    },
+    {
+      "id": "openai-pro200",
+      "provider_id": "openai",
+      "name": "ChatGPT Pro 200",
+      "monthly_usd": 200,
+      "source_url": "https://help.openai.com/en/articles/9793128-about-chatgpt-pro-tiers"
+    },
+    {
+      "id": "openai-pro500",
+      "provider_id": "openai",
+      "name": "ChatGPT Pro 500",
+      "monthly_usd": 500,
+      "source_url": "https://help.openai.com/en/articles/9793128-about-chatgpt-pro-tiers"
+    },
+    {
+      "id": "anthropic-free",
+      "provider_id": "anthropic",
+      "name": "Claude Free",
+      "monthly_usd": 0,
+      "source_url": "https://claude.com/pricing"
+    },
+    {
+      "id": "anthropic-pro",
+      "provider_id": "anthropic",
+      "name": "Claude Pro",
+      "monthly_usd": 20,
+      "source_url": "https://claude.com/pricing"
+    },
+    {
+      "id": "anthropic-max",
+      "provider_id": "anthropic",
+      "name": "Claude Max",
+      "monthly_usd": 100,
+      "source_url": "https://claude.com/pricing"
+    },
+    {
+      "id": "anthropic-ultra",
+      "provider_id": "anthropic",
+      "name": "Claude Ultra",
+      "monthly_usd": 200,
+      "source_url": "https://claude.com/pricing"
+    },
+    {
+      "id": "google-free",
+      "provider_id": "google",
+      "name": "Gemini Free",
+      "monthly_usd": 0,
+      "source_url": "https://gemini.google/us/subscriptions/"
+    },
+    {
+      "id": "google-plus",
+      "provider_id": "google",
+      "name": "Google AI Plus",
+      "monthly_usd": 4.99,
+      "source_url": "https://gemini.google/us/subscriptions/"
+    },
+    {
+      "id": "google-pro",
+      "provider_id": "google",
+      "name": "Google AI Pro",
+      "monthly_usd": 19.99,
+      "source_url": "https://gemini.google/us/subscriptions/"
+    },
+    {
+      "id": "google-ultra5",
+      "provider_id": "google",
+      "name": "Google AI Ultra 5×",
+      "monthly_usd": 99.99,
+      "source_url": "https://gemini.google/us/subscriptions/"
+    },
+    {
+      "id": "google-ultra20",
+      "provider_id": "google",
+      "name": "Google AI Ultra 20×",
+      "monthly_usd": 199.99,
+      "source_url": "https://gemini.google/us/subscriptions/"
+    }
+  ],
+  "caveats": [
+    "Prices are plan list-price references; taxes, annual discounts, promotions, family sharing, regional variations and caps excluded.",
+    "Subscription entitlements are NOT equivalent to token API quota and subscription fees do NOT pay for API usage.",
+    "API retail-equivalent value is an alternative hypothetical purchase price, not provider internal cost or a guaranteed entitlement.",
+    "Google AI plans bundle storage and other services; allocating full payment to text inference is an explicitly simplified comparison.",
+    "Real usage can exceed plan limits, trigger upgrade/credits, or route to a different model."
+  ]
+}
