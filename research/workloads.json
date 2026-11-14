@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "description": "Illustrative workloads to explain units; NOT observed ChatGPT, Claude, or Gemini traces. A visible user turn may require multiple model calls.",
+  "token_counting_note": "Average input includes system instructions, accumulated conversation, retrieved context and tool results, not merely the example prompt text.",
+  "examples": [
+    {
+      "id": "quick", "name": "Everyday question", "kind": "Single exchange",
+      "subtitle": "One question, one generated answer",
+      "example_prompt": "Why does a metal spoon feel colder than a wooden spoon in the same room?",
+      "description": "A short factual explanation. The typed question is short, but input can also include hidden system instructions and context.",
+      "user_turns": 1, "model_calls": 1, "input_tokens_per_call": 300,
+      "visible_output_tokens_per_call": 320, "cached_input_fraction": 0,
+      "billed_output_multiplier": 1.0, "tool_executions": 0,
+      "tasks_per_month": 100, "evidence": "Illustrative scenario, not telemetry.",
+      "exclusions": "Any upstream moderation/routing and any non-text work are not measured."
+    },
+    {
+      "id": "brainstorm", "name": "Brainstorming session", "kind": "Multi-turn conversation",
+      "subtitle": "Eight rounds of ideas, feedback, and revisions",
+      "example_prompt": "Help me design a community repair night. Let's iterate on names, budgeting, volunteers, supplies and an announcement across several rounds.",
+      "description": "Repeated conversation history appears in subsequent prompts. The session includes multiple billed model calls, not just the final message.",
+      "user_turns": 8, "model_calls": 10, "input_tokens_per_call": 3000,
+      "visible_output_tokens_per_call": 650, "cached_input_fraction": 0.25,
+      "billed_output_multiplier": 1.3, "tool_executions": 0,
+      "tasks_per_month": 10, "evidence": "Illustrative scenario, not telemetry.",
+      "exclusions": "Any image generation, searches or file uploads would require separate costing."
+    },
+    {
+      "id": "coding", "name": "Agentic coding + deployment", "kind": "Multi-step agent workflow",
+      "subtitle": "Plan, generate code, test, debug, and deploy to staging",
+      "example_prompt": "Create a small authenticated dashboard, add automated tests, fix the CI failures, and prepare a safe staging deployment with a rollback plan.",
+      "description": "A complex task may invoke the model repeatedly to review files, generate patches, read test output and retry. Shell jobs, CI minutes, hosting and external tools are separate cost categories.",
+      "user_turns": 20, "model_calls": 60, "input_tokens_per_call": 12000,
+      "visible_output_tokens_per_call": 1250, "cached_input_fraction": 0.45,
+      "billed_output_multiplier": 1.8, "tool_executions": 85,
+      "tasks_per_month": 2, "evidence": "Illustrative scenario, not telemetry. Calls and token volumes are NOT an actual coding-agent run.",
+      "exclusions": "Shell/CI/runtime compute, file and web tool charges, remote services, build artifacts, network usage, and staging hosting are unpriced unless an optional external amount is supplied."
+    },
+    {
+      "id": "custom", "name": "My own question", "kind": "Estimated single exchange",
+      "subtitle": "Paste a prompt and optional reply; nothing leaves this browser",
+      "example_prompt": "",
+      "description": "A rough English-character estimate for visible text plus an explicit context allowance. This does not reproduce a provider tokenizer or hidden context.",
+      "user_turns": 1, "model_calls": 1, "input_tokens_per_call": 300,
+      "visible_output_tokens_per_call": 320, "cached_input_fraction": 0,
+      "billed_output_multiplier": 1.0, "tool_executions": 0,
+      "tasks_per_month": 100, "evidence": "Text-to-token heuristic is a rough estimate, not billed tokens.",
+      "exclusions": "Unseen system instructions, attachment processing, tools and hidden reasoning may increase actual costs."
+    }
+  ]
+}
