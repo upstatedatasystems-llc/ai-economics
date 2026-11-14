@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily AI Economics source checks
+
+[Timer]
+OnCalendar=*-*-* 04:15:00 UTC
+RandomizedDelaySec=30m
+Persistent=true
+Unit=ai-economics-refresh.service
+
+[Install]
+WantedBy=timers.target

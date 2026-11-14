@@ -1,0 +1,22 @@
+[Unit]
+Description=AI Economics public-source monitor and snapshot builder
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ai-economics
+Group=ai-economics
+WorkingDirectory=/opt/ai-economics
+Environment=PYTHONPATH=/opt/ai-economics/src
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 -m ai_economics refresh
+TimeoutStartSec=240
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/ai-economics/var /opt/ai-economics/site/data
+MemoryMax=160M
+CPUQuota=40%
+Nice=10
