@@ -110,8 +110,54 @@
   </div>
   <p class="small muted">*This is not a provider profit or loss statement. It excludes training and research expense, payment fees, advertising and bundled-plan economics, and unpriced tool execution unless entered. Provider model routing is not public.</p>
 </section>
+
+<section class="macro" aria-labelledby="macro-heading">
+  <div class="section-heading"><div><p class="eyebrow">06 / COMPANY-SCALE MODEL</p><h2 id="macro-heading">What could it cost at millions of users?</h2></div><span class="method-badge">Population scenario — not actual company figures</span></div>
+  <p class="lead mini-lead">Apply the task-level research model to an entire hypothetical service. Choose OpenAI, Anthropic, or Google, then change how many people pay, how many use a free tier, and how much business arrives through the API. All population defaults below are hypothetical—not measured customer counts.</p>
+  <div class="macro-head"><label>Provider<select id="macro-provider"></select></label><label>Costing route<select id="macro-ownership"><option value="cloud">Rented 8× H100 proxy</option><option value="owned">Owned infrastructure proxy</option></select></label><button type="button" id="macro-reset" class="button-minimal">Reset hypothetical scenario</button></div>
+  <div class="macro-control-grid">
+    <div class="macro-group"><h3>Paying users</h3>
+      <label>Assumed subscribers<input id="macro-paid-users" type="number" min="0" max="1000000000" step="100000"></label>
+      <label>Completed tasks / user / month<input id="macro-paid-tasks" type="number" min="0" max="10000" step="1"></label>
+      <label>Representative task<select id="macro-paid-profile"></select></label>
+    </div>
+    <div class="macro-group"><h3>Free users</h3>
+      <label>Assumed active users<input id="macro-free-users" type="number" min="0" max="1000000000" step="100000"></label>
+      <label>Completed tasks / user / month<input id="macro-free-tasks" type="number" min="0" max="10000" step="1"></label>
+      <label>Representative task<select id="macro-free-profile"></select></label>
+      <label>Assumed advertising / free user / month ($)<input id="macro-ad-arpu" type="number" min="0" max="1000" step=".05"></label>
+    </div>
+    <div class="macro-group"><h3>Business API</h3>
+      <label>Completed API tasks / month<input id="macro-api-tasks" type="number" min="0" max="1000000000" step="1000"></label>
+      <label>Representative task<select id="macro-api-profile"></select></label>
+      <label>Effective % of public API retail rate<input id="macro-api-realization" type="number" min="0" max="100" step="5"></label>
+      <label>Optional extra business expense / YEAR ($)<input id="macro-other-annual" type="number" min="0" max="1000000000000" step="1000000" placeholder="0 — not included"></label>
+    </div>
+  </div>
+  <div class="macro-periods" role="group" aria-label="Timeframe">
+    <button class="period-button" data-period="day" type="button">Per day</button>
+    <button class="period-button" data-period="month" type="button">Per month</button>
+    <button class="period-button" data-period="year" type="button">Per year</button>
+  </div>
+  <div class="macro-metrics">
+    <div class="metric"><p>Modeled gross revenue</p><strong id="macro-revenue">—</strong><small>Subscriptions, assumed ads, realized API retail</small></div>
+    <div class="metric"><p>Modeled serving expense</p><strong id="macro-serving">—</strong><small>Inference compute, supporting operations and administration</small></div>
+    <div class="metric"><p>Additional expense assumption</p><strong id="macro-extra">—</strong><small>Optional annual training/R&D/other allowance allocated to period</small></div>
+    <div class="metric"><p>Revenue minus modeled costs</p><strong id="macro-balance">—</strong><small>Not real profit or loss: excludes unpriced categories</small></div>
+  </div>
+  <div class="compare-grid">
+    <article class="panel"><h3>Revenue sources</h3><div class="bars" id="macro-revenue-bars"></div></article>
+    <article class="panel"><h3>Cost categories</h3><div class="bars" id="macro-cost-bars"></div></article>
+  </div>
+  <div class="range-panel"><div><h3>Volume driving the model</h3><p class="small muted">Assumed users, task frequency and model calls across paid/free/API segments. Task mixes are simplified and don't represent measured provider telemetry.</p></div><div class="range-list"><span>Tasks / month<strong id="macro-tasks">—</strong></span><span>Model calls / month<strong id="macro-calls">—</strong></span></div></div>
+  <div class="reported-panel">
+    <div class="section-heading"><div><p class="eyebrow">SEPARATE FROM THE SCENARIO</p><h3>Publicly reported financial context</h3></div></div>
+    <p class="small muted">The following items have distinct measurement periods and accounting scopes. Some include training compute or non-AI revenue. They are NOT inputs to the scenario and must not be added to its modeled costs or treated as comparable annual company results.</p>
+    <div id="reported" class="reported-grid"></div>
+  </div>
+</section>
 <section class="methodology">
-  <div class="section-heading"><div><p class="eyebrow">06 / EVIDENCE & LIMITS</p><h2>How trustworthy is each input?</h2></div><span id="reviewed" class="muted small"></span></div>
+  <div class="section-heading"><div><p class="eyebrow">07 / EVIDENCE & LIMITS</p><h2>How trustworthy is each input?</h2></div><span id="reviewed" class="muted small"></span></div>
   <div class="evidence-grid">
     <div class="evidence"><span class="circle known"></span><h3>Published reference</h3><p>Consumer plans, API schedules, GPU rental price, electricity and facility-efficiency references.</p></div>
     <div class="evidence"><span class="circle assumed"></span><h3>Transparent assumption</h3><p>Calls per task, throughput, workload size, hidden output, caching, staffing, fleet utilization and overhead.</p></div>
