@@ -18,6 +18,8 @@ jobs:
         run: |
           node --check site/core.js
           node --check site/app.js
+          node --check site/units.js
+          node --check site/explain.js
           node tests/test_core.js
       - name: Offline build and export
         run: |
@@ -26,6 +28,8 @@ jobs:
           python -m json.tool dist/ai-economics/data/research.json >/dev/null
           test -s dist/ai-economics/index.html
           test -s dist/ai-economics/core.js
+          test -s dist/ai-economics/units.js
+          test -s dist/ai-economics/explain.js
           node tests/test_core.js
       - name: Verify privacy-safe diagnostics archive
         run: |
