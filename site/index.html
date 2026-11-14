@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Research-driven comparison of AI subscriptions, API retail equivalence and modeled inference infrastructure costs.">
+<title>AI Economics | Upstate Data Systems</title>
+<link rel="stylesheet" href="./styles.css">
+<script src="./app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#content">Skip to calculator</a>
+<header class="site-header">
+  <div class="shell header-content">
+    <a class="brand" href="https://upstatedatasystems.com/"><span class="brand-icon">U</span><span>UPSTATE <small>DATA SYSTEMS LLC</small></span></a>
+    <div class="header-side"><span class="status-dot"></span><span>Research project · v0.1</span></div>
+  </div>
+</header>
+<main id="content" class="shell">
+  <section class="hero">
+    <p class="eyebrow">AN OPEN RESEARCH PROJECT</p>
+    <h1>The economics behind an AI response.</h1>
+    <p class="lead">Compare what a user pays, what the same workload would cost at published API prices, and what an AI service might spend delivering it. Every infrastructure result is a scenario—not a disclosure of any provider's actual costs.</p>
+    <div class="hero-pills"><span>3 providers</span><span>Published sources</span><span>Transparent assumptions</span></div>
+  </section>
+  <div id="error" role="alert" class="error" hidden></div>
+  <div id="loading" class="loading">Loading reviewed research dataset…</div>
+  <div id="dashboard" hidden>
+    <section class="workbench" aria-label="Calculator">
+      <div class="workbench-head"><div><p class="eyebrow">01 / EXPLORE</p><h2>Build a workload scenario</h2></div><button type="button" id="reset" class="button-minimal">Reset assumptions</button></div>
+      <div class="controls-grid">
+        <label>Provider <select id="provider"></select></label>
+        <label>Consumer plan <select id="plan"><option value="paid">Paid monthly subscription</option><option value="free">Free consumer access ($0)</option></select></label>
+        <label>Infrastructure <select id="ownership"><option value="cloud">Rented 8× H100 cloud system</option><option value="owned">Owned eight-GPU proxy system</option></select></label>
+      </div>
+      <div class="sliders">
+        <label for="responses">Monthly responses <output id="responses-value">1,000</output><input type="range" id="responses" min="100" max="10000" value="1000" step="100"></label>
+        <label for="input">Input tokens / response <output id="input-value">2,000</output><input type="range" id="input" min="250" max="16000" value="2000" step="250"></label>
+        <label for="output">Visible output tokens / response <output id="output-value">1,000</output><input type="range" id="output" min="100" max="8000" value="1000" step="100"></label>
+        <label for="cache">Cached input share <output id="cache-value">0%</output><input type="range" id="cache" min="0" max="90" value="0" step="5"></label>
+        <label for="reasoning">Output billable-token multiplier <output id="reasoning-value">1.0×</output><input type="range" id="reasoning" min="1" max="5" value="1" step="0.25"></label>
+      </div>
+      <details class="advanced"><summary>Infrastructure model assumptions <span>Change the technical parameters</span></summary>
+        <div class="controls-grid">
+          <label>Throughput / 8 GPUs (tokens/s) <input type="number" id="gpu_effective_tokens_s" min="500" max="6000" step="100"></label>
+          <label>Fleet utilization (0–1) <input type="number" id="utilization" min=".25" max=".85" step=".05"></label>
+          <label>Fleet size (8-GPU systems) <input type="number" id="fleet_nodes" min="20" max="3000" step="10"></label>
+          <label>Operations team (FTE) <input type="number" id="operations_fte" min="8" max="120" step="1"></label>
+          <label>Loaded annual cost / FTE ($) <input type="number" id="fully_loaded_salary_usd" min="120000" max="350000" step="10000"></label>
+          <label>Administration allocation (0–1) <input type="number" id="corporate_overhead_fraction" min="0" max=".4" step=".05"></label>
+        </div>
+        <p class="small muted">Values are scenario assumptions, not reported provider infrastructure. The owned model additionally uses depreciation, energy, PUE and maintenance assumptions documented in the source catalog.</p>
+      </details>
+    </section>
+    <section class="results" aria-label="Monthly comparison">
+      <div class="section-heading"><div><p class="eyebrow">02 / RESULTS</p><h2>The same usage, four different numbers.</h2></div><span id="scenario-label" class="method-badge">Baseline estimate</span></div>
+      <div class="metrics">
+        <article class="metric"><p>User pays</p><strong id="paid">$—</strong><small>Gross subscription payment before fees</small></article>
+        <article class="metric"><p>Equivalent API bill</p><strong id="api">$—</strong><small>Public API retail rate for selected comparator</small></article>
+        <article class="metric"><p>Infrastructure</p><strong id="infra">$—</strong><small>Compute capacity allocated to this workload</small></article>
+        <article class="metric"><p>Operations + admin</p><strong id="ops">$—</strong><small>Modeled personnel and overhead allocation</small></article>
+      </div>
+      <div class="compare-grid">
+        <article class="panel">
+          <h3>Monthly economics</h3>
+          <p class="small muted">All bars use the same dollar scale. Costs are additive; the API figure is an alternative revenue scenario, not an additional cost.</p>
+          <div id="bars" class="bars"></div>
+        </article>
+        <article class="panel summary-panel">
+          <h3>Estimated serving cost</h3>
+          <p id="total" class="big-total">—</p>
+          <div class="mini-grid"><div><small>Subscription margin proxy</small><strong id="consumer-margin">—</strong></div><div><small>API margin proxy</small><strong id="api-margin">—</strong></div></div>
+          <p id="interpretation" class="small muted"></p>
+        </article>
+      </div>
+      <div class="range-panel">
+        <div><h3>Sensitivity range</h3><p class="small muted">Low-cost and high-cost operating assumptions around the same workload. Not a statistical confidence interval.</p></div>
+        <div class="range-list"><span>Optimistic <strong id="low">—</strong></span><span>Baseline <strong id="base">—</strong></span><span>Conservative <strong id="high">—</strong></span></div>
+      </div>
+    </section>
+    <section class="methodology">
+      <div class="section-heading"><div><p class="eyebrow">03 / EVIDENCE</p><h2>What's measured and what's modeled?</h2></div><span id="reviewed" class="muted small"></span></div>
+      <div class="evidence-grid">
+        <div class="evidence"><span class="circle known"></span><h3>Published rates</h3><p>Consumer and API pricing, rented GPU instance rates and cited public benchmarks.</p></div>
+        <div class="evidence"><span class="circle assumed"></span><h3>Scenario assumptions</h3><p>Throughput, utilization, fleet scale, cost allocation, staffing and GPU-equivalent work.</p></div>
+        <div class="evidence"><span class="circle unknown"></span><h3>Not publicly disclosed</h3><p>Actual provider routing, per-user ad revenue, proprietary throughput and internal operating costs.</p></div>
+      </div>
+      <p class="method-explainer">The infrastructure engine prices input and output as output-equivalent compute, divides by modeled annual utilized throughput, and adds allocated operations. In cloud mode, GPU rental already includes the lessor's facilities and capital expenses; owned mode calculates power, PUE, depreciation and maintenance separately. No training or research-and-development allocation is included. No claim is made about actual corporate margins or subsidies.</p>
+      <div class="source-header"><h3>Source registry</h3><p id="monitor" class="small muted"></p></div>
+      <div id="sources" class="source-grid"></div>
+    </section>
+  </div>
+</main>
+<footer><div class="shell footer-inner"><span>© Upstate Data Systems LLC</span><span>Educational estimates · No provider affiliation</span><a href="https://github.com/upstatedatasystems-llc/ai-economics">Source code & methodology</a></div></footer>
+</body>
+</html>
