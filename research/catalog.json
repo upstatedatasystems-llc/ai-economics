@@ -87,8 +87,8 @@
       "url": "https://gemini.google/us/subscriptions/",
       "frequency_days": 1,
       "kind": "pricing",
-      "monitor_mode": "price_watch",
-      "monitoring_note": "Changes to normalized price-bearing HTML snippets are unverified candidates; reviewed numeric catalog values never auto-update."
+      "monitor_mode": "manual",
+      "monitoring_note": "Observed 2026-11-14 on purgatory01: no stable price-bearing HTML could be extracted. Retain reviewed prices; use a structured adapter or manual review rather than repeated unverifiable fetches."
     },
     {
       "id": "google_api",
@@ -96,8 +96,8 @@
       "url": "https://ai.google.dev/gemini-api/docs/pricing",
       "frequency_days": 1,
       "kind": "pricing",
-      "monitor_mode": "price_watch",
-      "monitoring_note": "Changes to normalized price-bearing HTML snippets are unverified candidates; reviewed numeric catalog values never auto-update."
+      "monitor_mode": "manual",
+      "monitoring_note": "Observed 2026-11-14 on purgatory01: no stable price-bearing HTML could be extracted. Retain reviewed prices; use a structured adapter or manual review rather than repeated unverifiable fetches."
     },
     {
       "id": "aws_gpu",
