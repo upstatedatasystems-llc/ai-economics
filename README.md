@@ -47,8 +47,8 @@ SSH to the server as your regular account and run:
     free -h
     df -h /
     systemctl --failed
-    sudo git clone https://github.com/upstatedatasystems-llc/ai-economics.git /opt/ai-economics
-    cd /opt/ai-economics
+    git clone https://github.com/upstatedatasystems-llc/ai-economics.git "$HOME/ai-economics"
+    cd "$HOME/ai-economics"
     PYTHONPATH=src python3 -m ai_economics build
     PYTHONPATH=src python3 -m unittest discover -s tests -v
     PYTHONPATH=src python3 -m ai_economics serve --port 8765
@@ -71,8 +71,10 @@ The server may require a different login username or your existing SSH host alia
 
 The repository provides an unprivileged, resource-capped systemd oneshot service and daily timer. Nothing is enabled until you deliberately install it.
 
-After reviewing the files, from /opt/ai-economics:
+After reviewing the local preview, install a separate production copy. The systemd setup will create dedicated writable state folders for the service account. From your SSH shell:
 
+    sudo git clone https://github.com/upstatedatasystems-llc/ai-economics.git /opt/ai-economics
+    cd /opt/ai-economics
     sudo bash scripts/prepare-purgatory01.sh
     sudo systemctl enable --now ai-economics-refresh.timer
     sudo systemctl start ai-economics-refresh.service
