@@ -65,14 +65,18 @@
       "provider_id": "anthropic",
       "name": "Claude Max",
       "monthly_usd": 100,
-      "source_url": "https://claude.com/pricing"
+      "source_url": "https://claude.com/pricing",
+      "api_credit_usd_month": 100,
+      "note": "Separate limited API credits advertised for eligible Max subscriptions; not automatically deducted in the calculator."
     },
     {
       "id": "anthropic-ultra",
       "provider_id": "anthropic",
       "name": "Claude Ultra",
       "monthly_usd": 200,
-      "source_url": "https://claude.com/pricing"
+      "source_url": "https://claude.com/pricing",
+      "api_credit_usd_month": 200,
+      "note": "Separate limited API credits advertised for eligible Ultra subscriptions; not automatically deducted in the calculator."
     },
     {
       "id": "google-free",
@@ -115,6 +119,7 @@
     "Subscription entitlements are NOT equivalent to token API quota and subscription fees do NOT pay for API usage.",
     "API retail-equivalent value is an alternative hypothetical purchase price, not provider internal cost or a guaranteed entitlement.",
     "Google AI plans bundle storage and other services; allocating full payment to text inference is an explicitly simplified comparison.",
-    "Real usage can exceed plan limits, trigger upgrade/credits, or route to a different model."
+    "Real usage can exceed plan limits, trigger upgrade/credits, or route to a different model.",
+    "As of November 2026, some Claude Max/Ultra consumer tiers advertise limited monthly API credits; the calculator does not automatically redeem or net those credits against a separate API workload."
   ]
 }
