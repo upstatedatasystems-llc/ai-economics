@@ -82,14 +82,14 @@ def estimate(catalog: dict, provider_id: str, *,
     overhead = weighted_monthly_tokens / capacity * operation_per_node
     fully_loaded = direct + overhead
     return {
-        "consumer_payment_usd": round(consumer, 8),
-        "gross_subscription_revenue_usd": round(consumer, 8),
-        "api_retail_equivalent_usd": round(api, 8),
-        "direct_infrastructure_usd": round(direct, 8),
-        "allocated_operations_and_admin_usd": round(overhead, 8),
-        "total_modeled_serving_usd": round(fully_loaded, 8),
-        "gross_revenue_minus_serving_usd": round(consumer - fully_loaded, 8),
-        "api_revenue_minus_serving_usd": round(api - fully_loaded, 8),
+        "consumer_payment_usd": round(consumer, 12),
+        "gross_subscription_revenue_usd": round(consumer, 12),
+        "api_retail_equivalent_usd": round(api, 12),
+        "direct_infrastructure_usd": round(direct, 12),
+        "allocated_operations_and_admin_usd": round(overhead, 12),
+        "total_modeled_serving_usd": round(fully_loaded, 12),
+        "gross_revenue_minus_serving_usd": round(consumer - fully_loaded, 12),
+        "api_revenue_minus_serving_usd": round(api - fully_loaded, 12),
         "output_equivalent_tokens": round(weighted_monthly_tokens, 2),
         "scenario": {"ownership": ownership, "cache_fraction": cache_fraction,
                      "thinking_multiplier": thinking_multiplier, "subscription": subscription,
@@ -164,22 +164,22 @@ def estimate_workload(catalog: dict, provider_id: str, workload: dict, *,
     return {
         "volume": volume,
         "per_task": {
-            "subscription_allocation_usd": round(month["gross_subscription_revenue_usd"] / repeats, 8),
+            "subscription_allocation_usd": round(month["gross_subscription_revenue_usd"] / repeats, 12),
             "api_retail_equivalent_usd": one["api_retail_equivalent_usd"],
             "inference_infrastructure_usd": one["direct_infrastructure_usd"],
             "allocated_operations_usd": one["allocated_operations_and_admin_usd"],
-            "modeled_inference_subtotal_usd": round(model_cost, 8),
+            "modeled_inference_subtotal_usd": round(model_cost, 12),
             "external_tool_cost_usd": external_tool_usd_per_task,
-            "total_if_external_cost_specified_usd": round(total_task, 8) if known_tools else None,
+            "total_if_external_cost_specified_usd": round(total_task, 12) if known_tools else None,
             "completeness": "tool_cost_user_supplied" if known_tools else "model_only_unpriced_tools"
         },
         "per_month": {
             "subscription_gross_usd": month["gross_subscription_revenue_usd"],
             "api_retail_equivalent_usd": month["api_retail_equivalent_usd"],
-            "modeled_inference_subtotal_usd": round(monthly_model_cost, 8),
-            "total_if_external_cost_specified_usd": round(monthly_cost, 8) if known_tools else None,
+            "modeled_inference_subtotal_usd": round(monthly_model_cost, 12),
+            "total_if_external_cost_specified_usd": round(monthly_cost, 12) if known_tools else None,
             "subscription_minus_modeled_inference_usd": round(
-                month["gross_subscription_revenue_usd"] - monthly_model_cost, 8)
+                month["gross_subscription_revenue_usd"] - monthly_model_cost, 12)
         },
         "caveat": "Model-only serving subtotal; subscription share is accounting allocation, not price per request. No proprietary provider costs observed."
     }
