@@ -11,10 +11,11 @@ import sqlite3
 import sys
 import urllib.request
 
-from .model import estimate
+from .model import estimate, estimate_workload
 
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "research" / "catalog.json"
+WORKLOADS = ROOT / "research" / "workloads.json"
 DB = ROOT / "var" / "source-monitor.sqlite"
 SITE = ROOT / "site"
 MAX_BYTES = 2_000_000
@@ -33,6 +34,18 @@ def load_catalog():
         for key in ("input_usd_m", "cached_input_usd_m", "output_usd_m", "subscription_usd_month"):
             if p[key] < 0:
                 raise ValueError("negative pricing")
+    return data
+
+
+def load_workloads():
+    data = json.loads(WORKLOADS.read_text(encoding="utf-8"))
+    if data.get("schema_version") != 1:
+        raise ValueError("unsupported workload schema")
+    ids = [w["id"] for w in data["examples"]]
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate workload ID")
+    for workload in data["examples"]:
+        estimate_workload(load_catalog(), "openai", workload)
     return data
 
 
@@ -106,6 +119,8 @@ def build():
     data["generated_at"] = now()
     data["policy"] = "Reviewed reference prices; monitor detects changes but never auto-approves prices."
     data["sample_results"] = {p["id"]:estimate(data, p["id"]) for p in data["providers"]}
+    data["workloads"] = load_workloads()
+    data["sample_workload_results"] = {w["id"]:estimate_workload(data, "openai", w) for w in data["workloads"]["examples"]}
     write_json(SITE / "data" / "research.json", data)
     write_json(SITE / "data" / "health.json", health())
     print("Built " + str(SITE / "data" / "research.json"))
