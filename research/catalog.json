@@ -5,62 +5,249 @@
   "pricing_unit": "USD per million text tokens",
   "providers": [
     {
-      "id": "openai", "name": "OpenAI", "plan_name": "ChatGPT Plus",
-      "subscription_usd_month": 20.0,
-      "model_name": "gpt-6.1-sol", "input_usd_m": 2.0,
-      "cached_input_usd_m": 0.10, "output_usd_m": 10.0,
-      "plan_source": "openai_plan", "api_source": "openai_api",
+      "id": "openai",
+      "name": "OpenAI",
+      "plan_name": "ChatGPT Plus",
+      "subscription_usd_month": 20,
+      "model_name": "gpt-6.1-sol",
+      "input_usd_m": 2,
+      "cached_input_usd_m": 0.1,
+      "output_usd_m": 10,
+      "plan_source": "openai_plan",
+      "api_source": "openai_api",
       "note": "Selected public API comparator only; no claim this API model serves all ChatGPT messages."
     },
     {
-      "id": "anthropic", "name": "Anthropic", "plan_name": "Claude Pro",
-      "subscription_usd_month": 20.0,
-      "model_name": "Claude Sonnet 4.6", "input_usd_m": 3.0,
-      "cached_input_usd_m": 0.30, "output_usd_m": 15.0,
-      "plan_source": "anthropic_plan", "api_source": "anthropic_api",
+      "id": "anthropic",
+      "name": "Anthropic",
+      "plan_name": "Claude Pro",
+      "subscription_usd_month": 20,
+      "model_name": "Claude Sonnet 4.6",
+      "input_usd_m": 3,
+      "cached_input_usd_m": 0.3,
+      "output_usd_m": 15,
+      "plan_source": "anthropic_plan",
+      "api_source": "anthropic_api",
       "note": "Selected public API comparator; model selection and caching may differ in Claude."
     },
     {
-      "id": "google", "name": "Google", "plan_name": "Google AI Pro",
+      "id": "google",
+      "name": "Google",
+      "plan_name": "Google AI Pro",
       "subscription_usd_month": 19.99,
-      "model_name": "Gemini 2.5 Flash", "input_usd_m": 0.30,
-      "cached_input_usd_m": 0.03, "output_usd_m": 2.50,
-      "plan_source": "google_plan", "api_source": "google_api",
+      "model_name": "Gemini 2.5 Flash",
+      "input_usd_m": 0.3,
+      "cached_input_usd_m": 0.03,
+      "output_usd_m": 2.5,
+      "plan_source": "google_plan",
+      "api_source": "google_api",
       "note": "Selected API comparator; Google AI Pro may use other models and includes bundled non-chat benefits."
     }
   ],
   "sources": [
-    {"id":"openai_plan","name":"ChatGPT Plus pricing","url":"https://help.openai.com/en/articles/6950777","frequency_days":1,"kind":"pricing"},
-    {"id":"openai_api","name":"OpenAI API pricing","url":"https://developers.openai.com/api/docs/pricing","frequency_days":1,"kind":"pricing"},
-    {"id":"anthropic_plan","name":"Claude consumer pricing","url":"https://claude.com/pricing","frequency_days":1,"kind":"pricing"},
-    {"id":"anthropic_api","name":"Claude API pricing","url":"https://platform.claude.com/docs/en/about-claude/pricing","frequency_days":1,"kind":"pricing"},
-    {"id":"google_plan","name":"Google AI Pro pricing","url":"https://gemini.google/us/subscriptions/","frequency_days":1,"kind":"pricing"},
-    {"id":"google_api","name":"Gemini API pricing","url":"https://ai.google.dev/gemini-api/docs/pricing","frequency_days":1,"kind":"pricing"},
-    {"id":"aws_gpu","name":"AWS H100 P5 Capacity Blocks prices","url":"https://aws.amazon.com/ec2/capacityblocks/pricing/","frequency_days":7,"kind":"infrastructure"},
-    {"id":"uptime_pue","name":"Uptime Institute 2025 Global Data Center Survey","url":"https://datacenter.uptimeinstitute.com/rs/711-RIA-145/images/2025.Annual.Survey.Report.pdf?version=0","frequency_days":30,"kind":"infrastructure"},
-    {"id":"eia_electricity","name":"EIA electricity prices","url":"https://www.eia.gov/electricity/data.php","frequency_days":30,"kind":"electricity"},
-    {"id":"bls_wages","name":"BLS software developer compensation","url":"https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm","frequency_days":30,"kind":"labor"},
-    {"id":"mlperf","name":"MLCommons inference benchmark program","url":"https://github.com/mlcommons/inference","frequency_days":7,"kind":"benchmark"},
-    {"id":"sec_edgar","name":"SEC company facts API documentation","url":"https://www.sec.gov/search-filings/edgar-application-programming-interfaces","frequency_days":30,"kind":"finance"}
+    {
+      "id": "openai_plan",
+      "name": "ChatGPT Plus pricing",
+      "url": "https://help.openai.com/en/articles/6950777",
+      "frequency_days": 1,
+      "kind": "pricing",
+      "monitor_mode": "manual",
+      "monitoring_note": "Automated requests returned 403 on purgatory01; reviewed subscription price remains in catalog."
+    },
+    {
+      "id": "openai_api",
+      "name": "OpenAI API pricing",
+      "url": "https://developers.openai.com/api/docs/pricing",
+      "frequency_days": 1,
+      "kind": "pricing",
+      "monitor_mode": "price_watch",
+      "monitoring_note": "Changes to normalized price-bearing HTML snippets are unverified candidates; reviewed numeric catalog values never auto-update."
+    },
+    {
+      "id": "anthropic_plan",
+      "name": "Claude consumer pricing",
+      "url": "https://claude.com/pricing",
+      "frequency_days": 1,
+      "kind": "pricing",
+      "monitor_mode": "price_watch",
+      "monitoring_note": "Changes to normalized price-bearing HTML snippets are unverified candidates; reviewed numeric catalog values never auto-update."
+    },
+    {
+      "id": "anthropic_api",
+      "name": "Claude API pricing",
+      "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "frequency_days": 1,
+      "kind": "pricing",
+      "monitor_mode": "price_watch",
+      "monitoring_note": "Changes to normalized price-bearing HTML snippets are unverified candidates; reviewed numeric catalog values never auto-update."
+    },
+    {
+      "id": "google_plan",
+      "name": "Google AI Pro pricing",
+      "url": "https://gemini.google/us/subscriptions/",
+      "frequency_days": 1,
+      "kind": "pricing",
+      "monitor_mode": "price_watch",
+      "monitoring_note": "Changes to normalized price-bearing HTML snippets are unverified candidates; reviewed numeric catalog values never auto-update."
+    },
+    {
+      "id": "google_api",
+      "name": "Gemini API pricing",
+      "url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "frequency_days": 1,
+      "kind": "pricing",
+      "monitor_mode": "price_watch",
+      "monitoring_note": "Changes to normalized price-bearing HTML snippets are unverified candidates; reviewed numeric catalog values never auto-update."
+    },
+    {
+      "id": "aws_gpu",
+      "name": "AWS H100 P5 Capacity Blocks prices",
+      "url": "https://aws.amazon.com/ec2/capacityblocks/pricing/",
+      "frequency_days": 7,
+      "kind": "infrastructure",
+      "monitor_mode": "price_watch",
+      "monitoring_note": "Changes to normalized price-bearing HTML snippets are unverified candidates; reviewed numeric catalog values never auto-update."
+    },
+    {
+      "id": "uptime_pue",
+      "name": "Uptime Institute 2025 Global Data Center Survey",
+      "url": "https://datacenter.uptimeinstitute.com/rs/711-RIA-145/images/2025.Annual.Survey.Report.pdf?version=0",
+      "frequency_days": 30,
+      "kind": "infrastructure",
+      "monitor_mode": "manual",
+      "monitoring_note": "PDF and changing assets should not be hashed as HTML price evidence."
+    },
+    {
+      "id": "eia_electricity",
+      "name": "EIA electricity prices",
+      "url": "https://www.eia.gov/electricity/data.php",
+      "frequency_days": 30,
+      "kind": "electricity",
+      "monitor_mode": "manual",
+      "monitoring_note": "Generic page is not a numerical data feed; integrate EIA API later."
+    },
+    {
+      "id": "bls_wages",
+      "name": "BLS software developer compensation",
+      "url": "https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm",
+      "frequency_days": 30,
+      "kind": "labor",
+      "monitor_mode": "manual",
+      "monitoring_note": "Automated requests returned 403; integrate BLS public API series before enabling scheduled numerical updates."
+    },
+    {
+      "id": "mlperf",
+      "name": "MLCommons inference benchmark program",
+      "url": "https://github.com/mlcommons/inference",
+      "frequency_days": 7,
+      "kind": "benchmark",
+      "monitor_mode": "manual",
+      "monitoring_note": "GitHub page churn does not constitute a verified benchmark release; integrate release/API adapter later."
+    },
+    {
+      "id": "sec_edgar",
+      "name": "SEC company facts API documentation",
+      "url": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+      "frequency_days": 30,
+      "kind": "finance",
+      "monitor_mode": "manual",
+      "monitoring_note": "Automated requests returned 403; use identified EDGAR JSON APIs with properly registered contact/user agent later."
+    }
   ],
   "references": {
-    "h100_p5_8gpu_usd_hour": {"value":47.757,"source":"aws_gpu","description":"US East P5.48xlarge Capacity Blocks, eight H100s; rental price includes cloud facility costs"},
-    "pue": {"value":1.54,"source":"uptime_pue","description":"2025 weighted average survey PUE; not specific to any AI provider"},
-    "electricity_usd_kwh": {"value":0.0862,"source":"eia_electricity","description":"2025 US average industrial electricity rate, 8.62 cents per kWh"},
-    "software_developer_wage_usd_year": {"value":135980,"source":"bls_wages","description":"May 2025 US median developer wage, not an actual provider cost"}
+    "h100_p5_8gpu_usd_hour": {
+      "value": 47.757,
+      "source": "aws_gpu",
+      "description": "US East P5.48xlarge Capacity Blocks, eight H100s; rental price includes cloud facility costs"
+    },
+    "pue": {
+      "value": 1.54,
+      "source": "uptime_pue",
+      "description": "2025 weighted average survey PUE; not specific to any AI provider"
+    },
+    "electricity_usd_kwh": {
+      "value": 0.0862,
+      "source": "eia_electricity",
+      "description": "2025 US average industrial electricity rate, 8.62 cents per kWh"
+    },
+    "software_developer_wage_usd_year": {
+      "value": 135980,
+      "source": "bls_wages",
+      "description": "May 2025 US median developer wage, not an actual provider cost"
+    }
   },
   "assumptions": {
-    "gpu_effective_tokens_s": {"value":2000,"min":500,"max":6000,"description":"Output-equivalent tokens/s per eight-GPU system; unbenchmarked placeholder, not verified MLPerf throughput"},
-    "utilization": {"value":0.60,"min":0.25,"max":0.85,"description":"Effective utilized capacity across an entire year"},
-    "input_compute_weight": {"value":0.15,"min":0.05,"max":0.45,"description":"Input token cost expressed as output-token equivalents"},
-    "cached_input_compute_weight": {"value":0.02,"min":0.005,"max":0.10,"description":"Cached input token output-equivalent compute weight"},
-    "fleet_nodes": {"value":200,"min":20,"max":3000,"description":"Number of eight-GPU systems sharing modeled operational overhead"},
-    "operations_fte": {"value":24,"min":8,"max":120,"description":"Personnel assigned to modeled fleet; NOT observed provider headcount"},
-    "fully_loaded_salary_usd": {"value":200000,"min":120000,"max":350000,"description":"Average salary plus benefits and taxes, hypothetical"},
-    "corporate_overhead_fraction": {"value":0.15,"min":0.0,"max":0.40,"description":"Incremental allocation on personnel and operations, hypothetical"},
-    "owned_hardware_usd": {"value":250000,"min":150000,"max":500000,"description":"Estimated eight-GPU system capex, not a verified quote"},
-    "depreciation_years": {"value":4,"min":3,"max":6,"description":"Straight-line hardware depreciation period"},
-    "server_avg_power_kw": {"value":7.5,"min":4.0,"max":10.2,"description":"Assumed average server draw, distinct from peak rated power"},
-    "facility_maintenance_fraction": {"value":0.08,"min":0.03,"max":0.15,"description":"Annual maintenance as fraction of server capex; ownership scenario only"}
+    "gpu_effective_tokens_s": {
+      "value": 2000,
+      "min": 500,
+      "max": 6000,
+      "description": "Output-equivalent tokens/s per eight-GPU system; unbenchmarked placeholder, not verified MLPerf throughput"
+    },
+    "utilization": {
+      "value": 0.6,
+      "min": 0.25,
+      "max": 0.85,
+      "description": "Effective utilized capacity across an entire year"
+    },
+    "input_compute_weight": {
+      "value": 0.15,
+      "min": 0.05,
+      "max": 0.45,
+      "description": "Input token cost expressed as output-token equivalents"
+    },
+    "cached_input_compute_weight": {
+      "value": 0.02,
+      "min": 0.005,
+      "max": 0.1,
+      "description": "Cached input token output-equivalent compute weight"
+    },
+    "fleet_nodes": {
+      "value": 200,
+      "min": 20,
+      "max": 3000,
+      "description": "Number of eight-GPU systems sharing modeled operational overhead"
+    },
+    "operations_fte": {
+      "value": 24,
+      "min": 8,
+      "max": 120,
+      "description": "Personnel assigned to modeled fleet; NOT observed provider headcount"
+    },
+    "fully_loaded_salary_usd": {
+      "value": 200000,
+      "min": 120000,
+      "max": 350000,
+      "description": "Average salary plus benefits and taxes, hypothetical"
+    },
+    "corporate_overhead_fraction": {
+      "value": 0.15,
+      "min": 0,
+      "max": 0.4,
+      "description": "Incremental allocation on personnel and operations, hypothetical"
+    },
+    "owned_hardware_usd": {
+      "value": 250000,
+      "min": 150000,
+      "max": 500000,
+      "description": "Estimated eight-GPU system capex, not a verified quote"
+    },
+    "depreciation_years": {
+      "value": 4,
+      "min": 3,
+      "max": 6,
+      "description": "Straight-line hardware depreciation period"
+    },
+    "server_avg_power_kw": {
+      "value": 7.5,
+      "min": 4,
+      "max": 10.2,
+      "description": "Assumed average server draw, distinct from peak rated power"
+    },
+    "facility_maintenance_fraction": {
+      "value": 0.08,
+      "min": 0.03,
+      "max": 0.15,
+      "description": "Annual maintenance as fraction of server capex; ownership scenario only"
+    }
   }
 }
