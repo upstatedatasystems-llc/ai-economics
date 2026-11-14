@@ -96,3 +96,90 @@ def estimate(catalog: dict, provider_id: str, *,
                      "assumptions": deepcopy(a)},
         "disclaimer": "Research scenario, not provider costs, margins, or measured subsidy."
     }
+
+
+def estimate_workload(catalog: dict, provider_id: str, workload: dict, *,
+                      tasks_per_month: int | None = None,
+                      subscription: bool = True, ownership: str = "cloud",
+                      overrides: dict | None = None,
+                      external_tool_usd_per_task: float | None = None) -> dict:
+    """Price one completed task and repeated monthly tasks without confusing model calls and user turns.
+
+    External tools remain UNPRICED unless a caller supplies an explicit dollar estimate.
+    Consumer per-task spending is an allocation of a fixed subscription, not marginal billing.
+    """
+    required = ("user_turns", "model_calls", "input_tokens_per_call",
+                "visible_output_tokens_per_call", "cached_input_fraction",
+                "billed_output_multiplier", "tool_executions")
+    if any(key not in workload for key in required):
+        raise ValueError("workload missing a required field")
+    for field in ("user_turns", "model_calls", "input_tokens_per_call",
+                  "visible_output_tokens_per_call", "tool_executions"):
+        value = workload[field]
+        if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 1000000:
+            raise ValueError("invalid workload count: " + field)
+    calls = workload["model_calls"]
+    if calls < 1 or workload["user_turns"] < 1:
+        raise ValueError("workload requires turns and calls")
+    repeats = workload.get("tasks_per_month", 1) if tasks_per_month is None else tasks_per_month
+    if isinstance(repeats, bool) or not isinstance(repeats, int) or not 1 <= repeats <= 10000:
+        raise ValueError("tasks_per_month must be 1..10000")
+    cache = _safe_number(workload["cached_input_fraction"], "cached_input_fraction")
+    if cache > 1:
+        raise ValueError("cached_input_fraction cannot exceed one")
+    thinking = _safe_number(workload["billed_output_multiplier"], "billed_output_multiplier", 1)
+    if not 1 <= thinking <= 10:
+        raise ValueError("invalid billed output multiplier")
+    if external_tool_usd_per_task is not None:
+        external_tool_usd_per_task = _safe_number(external_tool_usd_per_task, "external_tool_usd_per_task")
+    def run(total_calls, subscribed):
+        return estimate(
+            catalog, provider_id, responses=total_calls,
+            input_tokens=workload["input_tokens_per_call"],
+            output_tokens=workload["visible_output_tokens_per_call"],
+            cache_fraction=cache, thinking_multiplier=thinking,
+            subscription=subscribed, ownership=ownership, overrides=overrides
+        )
+    one = run(calls, False)
+    month = run(calls * repeats, subscription)
+    billable_output = round(calls * workload["visible_output_tokens_per_call"] * thinking)
+    cached_input = round(calls * workload["input_tokens_per_call"] * cache)
+    volume = {
+        "user_turns": workload["user_turns"],
+        "model_calls": calls,
+        "tool_executions_unpriced": workload["tool_executions"],
+        "input_tokens_estimated": calls * workload["input_tokens_per_call"],
+        "cached_input_tokens_estimated": cached_input,
+        "visible_output_tokens_estimated": calls * workload["visible_output_tokens_per_call"],
+        "billed_output_tokens_estimated": billable_output,
+        "extra_hidden_output_tokens_estimated": billable_output - calls * workload["visible_output_tokens_per_call"],
+        "tasks_per_month": repeats,
+        "monthly_model_calls": calls * repeats
+    }
+    model_cost = one["total_modeled_serving_usd"]
+    known_tools = external_tool_usd_per_task is not None
+    total_task = model_cost + (external_tool_usd_per_task if known_tools else 0)
+    monthly_model_cost = month["total_modeled_serving_usd"]
+    monthly_cost = monthly_model_cost + (external_tool_usd_per_task * repeats if known_tools else 0)
+    return {
+        "volume": volume,
+        "per_task": {
+            "subscription_allocation_usd": round(month["gross_subscription_revenue_usd"] / repeats, 8),
+            "api_retail_equivalent_usd": one["api_retail_equivalent_usd"],
+            "inference_infrastructure_usd": one["direct_infrastructure_usd"],
+            "allocated_operations_usd": one["allocated_operations_and_admin_usd"],
+            "modeled_inference_subtotal_usd": round(model_cost, 8),
+            "external_tool_cost_usd": external_tool_usd_per_task,
+            "total_if_external_cost_specified_usd": round(total_task, 8) if known_tools else None,
+            "completeness": "tool_cost_user_supplied" if known_tools else "model_only_unpriced_tools"
+        },
+        "per_month": {
+            "subscription_gross_usd": month["gross_subscription_revenue_usd"],
+            "api_retail_equivalent_usd": month["api_retail_equivalent_usd"],
+            "modeled_inference_subtotal_usd": round(monthly_model_cost, 8),
+            "total_if_external_cost_specified_usd": round(monthly_cost, 8) if known_tools else None,
+            "subscription_minus_modeled_inference_usd": round(
+                month["gross_subscription_revenue_usd"] - monthly_model_cost, 8)
+        },
+        "caveat": "Model-only serving subtotal; subscription share is accounting allocation, not price per request. No proprietary provider costs observed."
+    }
