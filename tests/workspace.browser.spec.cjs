@@ -72,8 +72,9 @@ test('workload inputs, task expense and company tiers recalculate',async({page})
   await expect(page.locator('#macro-revenue')).not.toHaveText('—');
   await page.locator('#macro-cost-basis').selectOption('capacity');
   await expect(page.locator('#macro-provisioned')).not.toHaveText('—');
-  await page.locator('#macro-users-openai-plus').fill('0');
-  await page.locator('#macro-users-openai-free').fill('0');
+  for (const field of await page.locator('#macro-tier-rows input[id^="macro-users-"]').all()) {
+    await field.fill('0');
+  }
   await page.locator('#macro-api-customers').fill('0');
   await expect(page.locator('#macro-revenue')).toHaveText('$0.00');
   await page.locator('.period[data-period="year"]').click();
