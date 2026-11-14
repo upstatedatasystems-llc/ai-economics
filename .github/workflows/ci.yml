@@ -1,0 +1,22 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline unit tests
+        run: PYTHONPATH=src python -m unittest discover -s tests -v
+      - name: Offline build and export
+        run: |
+          PYTHONPATH=src python -m ai_economics build
+          PYTHONPATH=src python -m ai_economics export --target dist
+          python -m json.tool dist/ai-economics/data/research.json >/dev/null
+          test -s dist/ai-economics/index.html
