@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.env
+.env.*
+!.env.example
+var/
+*.sqlite
+*.sqlite-*
+site/data/research.json
+site/data/health.json
+dist/
+node_modules/
+.DS_Store
