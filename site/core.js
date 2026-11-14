@@ -123,6 +123,9 @@
     var consumerCost=paidCount*paidUnit.total+freeCount*freeUnit.total;
     var apiCost=apiTasks*apiUnit.total;
     var cost={consumer:consumerCost,api:apiCost};
+    var annualCapacity = unitCosts(catalog,cfg.ownership||"cloud",defaults(catalog,cfg.assumptions)).annual_capacity_equiv;
+    var monthlyEquiv = paidCount*paidUnit.output_equiv + freeCount*freeUnit.output_equiv + apiTasks*apiUnit.output_equiv;
+    var systems = monthlyEquiv/(annualCapacity/12);
     var revenue=income.subscriptions+income.advertising+income.api;
     var serving=consumerCost+apiCost;
     var extraAnnual=nonneg(cfg.additional_annual_expense_usd || 0);
@@ -145,6 +148,7 @@
       free_model_calls_month:freeCount*freeUnit.calls,
       api_model_calls_month:apiTasks*apiUnit.calls,
       total_model_calls_month:paidCount*paidUnit.calls+freeCount*freeUnit.calls+apiTasks*apiUnit.calls,
+      eight_gpu_systems_required:systems,weighted_equivalent_tokens_month:monthlyEquiv,
       revenue_segments:income,serving_segments:cost,
       day:period(12/365.25),month:period(1),year:period(12),
       completeness:extraAnnual>0?"serving_plus_user_defined_other":"model_only_serving",
