@@ -27,6 +27,11 @@ jobs:
           test -s dist/ai-economics/index.html
           test -s dist/ai-economics/core.js
           node tests/test_core.js
+      - name: Verify privacy-safe diagnostics archive
+        run: |
+          PYTHONPATH=src python -m ai_economics diagnostics --output dist/diagnostics-smoke.tar.gz
+          tar -tzf dist/diagnostics-smoke.tar.gz | grep -q diagnostics/manifest.json
+          tar -tzf dist/diagnostics-smoke.tar.gz | grep -q diagnostics/health.json
 
   browser:
     runs-on: ubuntu-latest
