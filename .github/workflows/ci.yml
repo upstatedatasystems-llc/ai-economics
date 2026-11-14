@@ -14,9 +14,16 @@ jobs:
           python-version: '3.12'
       - name: Offline unit tests
         run: PYTHONPATH=src python -m unittest discover -s tests -v
+      - name: Browser JavaScript checks
+        run: |
+          node --check site/core.js
+          node --check site/app.js
+          node tests/test_core.js
       - name: Offline build and export
         run: |
           PYTHONPATH=src python -m ai_economics build
           PYTHONPATH=src python -m ai_economics export --target dist
           python -m json.tool dist/ai-economics/data/research.json >/dev/null
           test -s dist/ai-economics/index.html
+          test -s dist/ai-economics/core.js
+          node tests/test_core.js
