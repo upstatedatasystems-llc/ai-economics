@@ -239,7 +239,9 @@
       check.addEventListener("change",sync);
       select.addEventListener("change",recalc);
       input.addEventListener("input",recalc);
-      sync();
+      row.classList.toggle("active",check.checked);
+      select.disabled=!check.checked;
+      input.disabled=!check.checked;
     }
     $("api-provider").value="openai";
     setAccessMode("subscription");
@@ -408,7 +410,7 @@
         set("macro-balance",money(p.estimated_balance));
         set("macro-tasks",count(macroResult.total_tasks_month));
         set("macro-calls",count(macroResult.model_calls_month));
-        set("macro-nodes",count(macroResult.estimated_gpu_systems.toFixed(2)));
+        set("macro-nodes",macroResult.estimated_gpu_systems.toFixed(2));
         set("macro-provisioned",count(macroResult.provisioned_gpu_systems));
         const ratio=macroResult.revenue_to_expense_ratio;
         set("macro-coverage",ratio===null?"n/a":(100*ratio).toFixed(0)+"%");
