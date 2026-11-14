@@ -151,6 +151,26 @@
       bar.append(segment);
     });
   }
+
+  function renderComparison() {
+    var rows=$("comparison-rows");rows.replaceChildren();
+    var cfg=taskConfig(),provider=$("provider").value;
+    samples.filter(function(w){return w.id!=="custom";}).forEach(function(w) {
+      var result=core.task(data,provider,w,{
+        paid:true,ownership:cfg.ownership,assumptions:cfg.assumptions,
+        repeats:w.tasks_per_month,extraToolCost:null
+      });
+      var tr=node("tr",chosen===w.id?"active":"");
+      var cell=node("td");
+      var btn=node("button","table-choice",w.name);
+      btn.type="button";btn.addEventListener("click",function(){setExample(w.id);});
+      cell.append(btn);tr.append(cell);
+      [w.user_turns,result.calls,result.tokens.input,result.tokens.billed_output]
+        .forEach(function(n){tr.append(node("td","",count(n)));});
+      tr.append(node("td","",amount(result.api)),node("td","",amount(result.total)));
+      rows.append(tr);
+    });
+  }
   function render() {
     if(!data) return;
     var profile=activeProfile(),cfg=taskConfig();
@@ -185,6 +205,7 @@
     text("base",amount(sensitivity.baseline));
     text("high",amount(sensitivity.conservative));
     renderTokenStats(result.tokens);
+    renderComparison();
     text("workload-explainer",
       chosen==="coding" ? "This example assumes "+count(profile.model_calls)+" model calls across "+count(profile.user_turns)+" user turns, plus "+count(profile.tool_executions)+" separate tool executions. Every model call reprocesses some code and context. Build and deployment resources are not included without an explicit tool-cost estimate."
       : chosen==="brainstorm" ? "The model makes "+count(profile.model_calls)+" calls across "+count(profile.user_turns)+" turns. Later prompts may include earlier answers and instructions, so input tokens accumulate beyond the user's newly typed words."
