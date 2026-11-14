@@ -11,11 +11,12 @@ import sqlite3
 import sys
 import urllib.request
 
-from .model import estimate, estimate_workload
+from .model import estimate, estimate_workload, estimate_macro
 
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "research" / "catalog.json"
 WORKLOADS = ROOT / "research" / "workloads.json"
+MACRO = ROOT / "research" / "macro.json"
 DB = ROOT / "var" / "source-monitor.sqlite"
 SITE = ROOT / "site"
 MAX_BYTES = 2_000_000
@@ -47,6 +48,13 @@ def load_workloads():
     for workload in data["examples"]:
         estimate_workload(load_catalog(), "openai", workload)
     return data
+
+
+def load_macro():
+    document = json.loads(MACRO.read_text(encoding="utf-8"))
+    if document.get("schema_version") != 1:
+        raise ValueError("unsupported macro schema")
+    return document
 
 
 def database():
@@ -120,7 +128,9 @@ def build():
     data["policy"] = "Reviewed reference prices; monitor detects changes but never auto-approves prices."
     data["sample_results"] = {p["id"]:estimate(data, p["id"]) for p in data["providers"]}
     data["workloads"] = load_workloads()
+    data["macro"] = load_macro()
     data["sample_workload_results"] = {w["id"]:estimate_workload(data, "openai", w) for w in data["workloads"]["examples"]}
+    data["sample_macro_results"] = {p["id"]: estimate_macro(data, p["id"], data["workloads"]["examples"], data["macro"]["profiles"][p["id"]]) for p in data["providers"]}
     write_json(SITE / "data" / "research.json", data)
     write_json(SITE / "data" / "health.json", health())
     print("Built " + str(SITE / "data" / "research.json"))
