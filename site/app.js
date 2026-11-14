@@ -1,13 +1,14 @@
-/* AI Economics v0.4 — single-pane guided estimator.
+/* AI Economics v0.5 — single-pane guided estimator.
  * All user-entered text is processed locally; diagnostics omit prompt contents.
  */
 "use strict";
 (function () {
   const core = window.AiEconomicsCore;
   const $ = (id) => document.getElementById(id);
-  const steps = ["task", "usage", "economics", "scale", "evidence"];
+  const steps = ["task", "access", "usage", "economics", "scale", "evidence"];
   const meta = {
     task: ["Choose a starting point", "Start with a familiar task, then adjust the workload until it resembles your own."],
+    access: ["Choose how you access AI", "Compare what subscriptions or API calls cost you against the estimated workload."],
     usage: ["Size the work", "Describe all the model calls and tokens needed to finish one complete task."],
     economics: ["Estimate the serving cost", "Compare public API retail with hypothetical compute and operating expenses."],
     scale: ["Explore the bigger picture", "Move from your monthly usage to a hypothetical company-scale scenario."],
@@ -16,6 +17,10 @@
   const formatting = new Intl.NumberFormat("en-US", {maximumFractionDigits: 0});
   let data=null,health=null,samples=[],selected="quick",step="task";
   let scaleMode="personal",period="month",evidenceTab="sources",result=null,macroResult=null;
+  let accessMode="subscription",portfolio=null;
+  const planPrefs={openai:{enabled:true,id:"openai-plus",weight:50},
+    anthropic:{enabled:false,id:"anthropic-pro",weight:0},
+    google:{enabled:true,id:"google-pro",weight:50}};
   const errors=[];
   function logError(message) {errors.push({at:new Date().toISOString(),message:String(message).slice(0,500)});if(errors.length>30) errors.shift();}
   window.addEventListener("error", e=>logError(e.message || "Unidentified script error"));
@@ -55,13 +60,14 @@
     step=where;
     document.querySelectorAll(".screen").forEach(s=>s.hidden=s.dataset.screen!==where);
     document.querySelectorAll("[data-go]").forEach(b=>{
-      const active=b.dataset.go===where;b.classList.toggle("selected",active);
+      const active=b.dataset.go===where;
+      b.classList.toggle("selected",active);
       if(active)b.setAttribute("aria-current","step");else b.removeAttribute("aria-current");
     });
     const i=steps.indexOf(where),n=i+1;
     set("stage-title",meta[where][0]);set("stage-description",meta[where][1]);
-    set("stage-caption","STEP "+String(n).padStart(2,"0")+" OF 05");
-    set("stage-pager",String(n).padStart(2,"0")+" / 05");
+    set("stage-caption","STEP "+String(n).padStart(2,"0")+" OF 06");
+    set("stage-pager",String(n).padStart(2,"0")+" / 06");
     $("previous").disabled=i===0;
     set("next",i===steps.length-1?"Back to start ↺":"Continue →");
     document.querySelectorAll("#progress-dots i").forEach((d,k)=>d.classList.toggle("active",k===i));
@@ -123,71 +129,174 @@
       if($(key)) assumptions[key]=number(key,data.assumptions[key].value);
     }
     const rawTools=$("extra-tool-cost").value.trim();
-    return {paid:$("plan").value==="paid",ownership:$("ownership").value,
+    return {ownership:$("ownership").value,
       repeats:Math.max(1,Math.round(number("repeats",1))),assumptions,
-      extraToolCost:rawTools===""?null:Number(rawTools)};
+      extraToolCost:rawTools===""?null:Math.max(0,Number(rawTools))};
   }
   function recalc(){
     if(!data)return;
     try{
-      const profile=taskProfile(),cfg=settings(),provider=$("provider").value;
-      result=core.task(data,provider,profile,cfg);
+      const profile=taskProfile(),cfg=settings();
+      portfolio=core.subscriptionPortfolio(data,data.access,profile,{
+        ...cfg,mode:accessMode,api_provider:$("api-provider").value,
+        selections:currentAccessSelections()
+      });
+      const mainProvider=portfolio.rows[0].provider_id;
+      result=core.task(data,mainProvider,profile,{...cfg,paid:false});
+      const included=portfolio.per_task_included_cost,pt=portfolio.total_tasks_month;
       set("side-task",currentSample().name);
       set("side-task-kind",currentSample().kind.toUpperCase());
-      set("side-provider",result.provider.name+" · "+result.provider.model_name);
-      const included=result.task_total_if_specified===null?result.total:result.task_total_if_specified;
-      set("side-total",money(included));set("side-api",money(result.api));
-      set("side-subscription",money(result.subscription_share));
+      set("side-provider",accessMode==="api"
+        ?result.provider.name+" API"
+        :portfolio.rows.map(r=>r.label).join(" + "));
+      set("side-total",money(included));
+      set("side-api",money(portfolio.per_task_api_equivalent));
+      set("side-subscription",money(portfolio.per_task_payment_allocation));
       set("side-calls",count(result.calls));
       set("side-tokens",count(result.tokens.input+result.tokens.billed_output));
-      set("side-cost-label",result.tool_cost===null
+      set("side-cost-label",cfg.extraToolCost==null
         ?"Inference + modeled operations / task"
-        :"Inference, operations + user-entered tool cost / task");
-      set("side-disclaimer",result.tool_cost!==null
-        ?"An extra "+money(result.tool_cost)+" per task was entered by the user. It is not an observed provider charge."
+        :"Inference, operations + entered tools / task");
+      set("side-disclaimer",cfg.extraToolCost!==null
+        ?"The external expense is supplied by you, not a measured AI-provider charge."
         :profile.tool_executions>0
-          ?count(profile.tool_executions)+" external tool executions are unpriced. This is NOT a complete task expense."
-          :"This is an illustrative cost model, not a measurement of the provider's actual expenses.");
+          ?count(profile.tool_executions)+" tool executions are unpriced and excluded."
+          :"This is a hardware/operations scenario, not an observation of company spending.");
       const tok=result.tokens;
       set("tokens-input",count(tok.input));set("tokens-cached",count(tok.cached));
       set("tokens-output",count(tok.billed_output));set("tokens-hidden",count(tok.hidden_output));
       const bar=$("token-bar");bar.replaceChildren();
       const pieces=[["uncached",tok.uncached],["cached",tok.cached],["output",tok.billed_output]];
-      const total=pieces.reduce((acc,p)=>acc+p[1],0);
+      const tokenTotal=pieces.reduce((acc,p)=>acc+p[1],0);
       for(const [label,value] of pieces){
         const seg=element("div",label);
-        seg.style.width=(total?value/total*100:0).toFixed(3)+"%";
+        seg.style.width=(tokenTotal?value/tokenTotal*100:0).toFixed(3)+"%";
         seg.title=label+": "+count(value)+" tokens";
         bar.append(seg);
       }
-      set("cost-api",money(result.api));set("cost-infra",money(result.infra));
-      set("cost-ops",money(result.ops));set("cost-tools",
-        result.tool_cost===null?"Unpriced":money(result.tool_cost));
+      set("cost-api",money(portfolio.per_task_api_equivalent));
+      set("cost-infra",money(portfolio.monthly_infrastructure/pt));
+      set("cost-ops",money(portfolio.monthly_operations/pt));
+      set("cost-tools",cfg.extraToolCost===null?"Unpriced":money(cfg.extraToolCost));
       set("cost-total",money(included));
-      const ranges=core.sensitivity(data,provider,profile,cfg);
-      set("cost-low",money(ranges.optimistic));set("cost-base",money(ranges.baseline));
+      const ranges=core.sensitivity(data,mainProvider,profile,{...cfg,paid:false});
+      set("cost-low",money(ranges.optimistic));
+      set("cost-base",money(ranges.baseline));
       set("cost-high",money(ranges.conservative));
-      set("personal-tasks",count(result.repeats));
-      set("personal-calls",count(result.calls*result.repeats));
-      set("personal-subscription",money(result.subscription_month));
-      set("personal-api",money(result.monthly_api));
-      const includedMonthly=result.monthly_total_if_specified===null
-        ?result.monthly_serving:result.monthly_total_if_specified;
-      set("personal-cost",money(includedMonthly));
-      set("personal-margin",money(result.subscription_month-includedMonthly));
-      set("rail-data-status","References "+data.reviewed_at);
+      set("personal-tasks",count(pt));
+      set("personal-calls",count(result.calls*pt));
+      set("personal-paid-label",accessMode==="api"?"Estimated API bill":"Subscription payments");
+      set("personal-subscription",money(portfolio.monthly_payment));
+      set("personal-api",money(portfolio.monthly_api_equivalent));
+      set("personal-cost",money(portfolio.monthly_included_cost));
+      set("personal-margin",money(portfolio.api_retail_less_payment));
+      set("rail-data-status","Research baseline "+data.reviewed_at);
+      renderAccess();
       if(step==="scale")renderScale();
     }catch(err){
       logError("Recalculation: "+String(err.message||err));
-      set("side-total","Check input values");
+      set("side-total","Check selections");
+      set("access-breakdown-heading","Choose at least one plan to calculate");
     }
   }
   function initProviderSelect(){
     for(const p of data.providers){
-      const a=element("option","",p.name+" · "+p.model_name);a.value=p.id;$("provider").append(a);
-      const b=element("option","",p.name);b.value=p.id;$("macro-provider").append(b);
+      const option=element("option","",p.name+" · "+p.model_name);
+      option.value=p.id;$("api-provider").append(option);
+      const company=element("option","",p.name);
+      company.value=p.id;$("macro-provider").append(company);
     }
   }
+
+  function initAccess(){
+    const parent=$("subscription-selections");parent.replaceChildren();
+    for(const provider of data.providers){
+      const pref=planPrefs[provider.id]||{enabled:false,id:"",weight:0};
+      const row=element("div","access-plan-row");row.dataset.provider=provider.id;
+      const checkedLabel=element("label","enable-plan");
+      const check=element("input");check.type="checkbox";check.id="access-enabled-"+provider.id;
+      check.checked=pref.enabled;
+      checkedLabel.append(check,element("span","",provider.name));
+      const planLabel=element("label","", "Plan");
+      const select=element("select");select.id="access-plan-"+provider.id;
+      for(const p of data.access.plans.filter(p=>p.provider_id===provider.id)){
+        const option=element("option","",p.name+" · "+money(p.monthly_usd)+"/mo");
+        option.value=p.id;select.append(option);
+      }
+      select.value=pref.id||select.options[0].value;
+      planLabel.append(select);
+      const weightLabel=element("label","", "Work share (weight)");
+      const input=element("input");input.type="number";input.id="access-weight-"+provider.id;
+      input.min="0";input.max="100";input.step="5";input.value=String(pref.weight);
+      weightLabel.append(input);
+      row.append(checkedLabel,planLabel,weightLabel);
+      parent.append(row);
+      const sync=()=>{
+        row.classList.toggle("active",check.checked);
+        select.disabled=!check.checked;input.disabled=!check.checked;
+        recalc();
+      };
+      check.addEventListener("change",sync);
+      select.addEventListener("change",recalc);
+      input.addEventListener("input",recalc);
+      sync();
+    }
+    $("api-provider").value="openai";
+    setAccessMode("subscription");
+  }
+
+  function setAccessMode(mode){
+    accessMode=mode==="api"?"api":"subscription";
+    $("subscriptions-access").hidden=accessMode!=="subscription";
+    $("api-access").hidden=accessMode!=="api";
+    for(const [id,active] of [["mode-subscriptions",accessMode==="subscription"],
+                              ["mode-api",accessMode==="api"]]){
+      $(id).classList.toggle("selected",active);
+      $(id).setAttribute("aria-pressed",String(active));
+    }
+    recalc();
+  }
+
+  function currentAccessSelections(){
+    const list=[];
+    for(const provider of data.providers){
+      if($("access-enabled-"+provider.id).checked){
+        list.push({plan_id:$("access-plan-"+provider.id).value,
+          weight:number("access-weight-"+provider.id)});
+      }
+    }
+    return list;
+  }
+
+  function renderAccess(){
+    if(!portfolio)return;
+    set("access-breakdown-heading",accessMode==="api"
+      ?"API pay-as-you-go comparison":"Your subscription economics");
+    set("access-paid-label",accessMode==="api"
+      ?"What the API would bill":"Total subscription payments");
+    set("access-monthly-paid",money(portfolio.monthly_payment));
+    set("access-api-value",money(portfolio.monthly_api_equivalent));
+    set("access-serving",money(portfolio.monthly_serving));
+    set("access-retail-gap",money(portfolio.api_retail_less_payment));
+    set("cost-value-status",accessMode==="api"
+      ?"Under API billing, the modeled token bill is paid per use; the provider may still incur separate internal costs. The gap here does not represent an additional user benefit."
+      :"For "+money(portfolio.monthly_payment)+" in monthly subscription fees, this example's workload would have a published API-retail equivalent of "+money(portfolio.monthly_api_equivalent)+". The difference is not guaranteed plan savings, usage entitlement, or provider loss.");
+    const root=$("access-comparison");root.replaceChildren();
+    for(const r of portfolio.rows){
+      const line=element("div","sub-result");
+      const label=element("span");label.append(element("strong","",r.label),
+        element("small","",count(r.tasks_month)+" tasks/month · "+(r.share*100).toFixed(1)+"% of work"));
+      function value(lbl,v){
+        const part=element("span","sub-value");
+        part.append(element("small","",lbl),document.createTextNode(money(v)));
+        return part;
+      }
+      line.append(label,value("You pay / mo",r.payment_month),
+        value("API equivalent",r.api_equivalent_month),value("Modeled serving",r.serving_month));
+      root.append(line);
+    }
+  }
+
   function initMacro(){
     for(const id of ["macro-paid-profile","macro-free-profile","macro-api-profile"]){
       for(const p of samples.filter(w=>w.id!=="custom")){
