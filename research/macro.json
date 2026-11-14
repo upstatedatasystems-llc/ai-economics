@@ -14,7 +14,39 @@
       "api_profile": "coding",
       "ad_usd_per_free_user_month": 0,
       "api_realization": 1,
-      "additional_annual_expense_usd": 0
+      "additional_annual_expense_usd": 0,
+      "tier_demo": {
+        "openai-free": {
+          "users": 40000000,
+          "tasks_per_user": 14,
+          "profile_id": "quick"
+        },
+        "openai-go": {
+          "users": 750000,
+          "tasks_per_user": 12,
+          "profile_id": "brainstorm"
+        },
+        "openai-plus": {
+          "users": 2100000,
+          "tasks_per_user": 15,
+          "profile_id": "brainstorm"
+        },
+        "openai-pro100": {
+          "users": 120000,
+          "tasks_per_user": 35,
+          "profile_id": "coding"
+        },
+        "openai-pro200": {
+          "users": 30000,
+          "tasks_per_user": 50,
+          "profile_id": "coding"
+        },
+        "openai-pro500": {
+          "users": 0,
+          "tasks_per_user": 75,
+          "profile_id": "coding"
+        }
+      }
     },
     "anthropic": {
       "paid_users": 1000000,
@@ -27,7 +59,29 @@
       "api_profile": "coding",
       "ad_usd_per_free_user_month": 0,
       "api_realization": 1,
-      "additional_annual_expense_usd": 0
+      "additional_annual_expense_usd": 0,
+      "tier_demo": {
+        "anthropic-free": {
+          "users": 4000000,
+          "tasks_per_user": 14,
+          "profile_id": "quick"
+        },
+        "anthropic-pro": {
+          "users": 900000,
+          "tasks_per_user": 12,
+          "profile_id": "brainstorm"
+        },
+        "anthropic-max": {
+          "users": 80000,
+          "tasks_per_user": 35,
+          "profile_id": "coding"
+        },
+        "anthropic-ultra": {
+          "users": 20000,
+          "tasks_per_user": 55,
+          "profile_id": "coding"
+        }
+      }
     },
     "google": {
       "paid_users": 6000000,
@@ -40,7 +94,34 @@
       "api_profile": "coding",
       "ad_usd_per_free_user_month": 0,
       "api_realization": 1,
-      "additional_annual_expense_usd": 0
+      "additional_annual_expense_usd": 0,
+      "tier_demo": {
+        "google-free": {
+          "users": 90000000,
+          "tasks_per_user": 14,
+          "profile_id": "quick"
+        },
+        "google-plus": {
+          "users": 1200000,
+          "tasks_per_user": 12,
+          "profile_id": "brainstorm"
+        },
+        "google-pro": {
+          "users": 4500000,
+          "tasks_per_user": 16,
+          "profile_id": "brainstorm"
+        },
+        "google-ultra5": {
+          "users": 240000,
+          "tasks_per_user": 35,
+          "profile_id": "coding"
+        },
+        "google-ultra20": {
+          "users": 60000,
+          "tasks_per_user": 55,
+          "profile_id": "coding"
+        }
+      }
     }
   },
   "reported_context": [
@@ -91,6 +172,7 @@
     "Monthly revenue is paid users × subscription price + free users × assumed ads/user + API task retail value × realization fraction.",
     "Serving cost is the per-task research model multiplied by assumed monthly paid/free/API task counts.",
     "Zero in additional business expense means not included, NOT that real companies spend zero on training, R&D, sales or finance.",
-    "Daily = monthly × 12 / 365.25, yearly = monthly × 12. These are normalized rates, not actual historical daily/monthly filings."
+    "Daily = monthly × 12 / 365.25, yearly = monthly × 12. These are normalized rates, not actual historical daily/monthly filings.",
+    "The tier_demo distributions are deliberately invented illustrations; they are NOT real provider subscriber counts or entitlement data. Higher-tier default usage rates are scenario choices, not reported limits."
   ]
 }
