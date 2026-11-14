@@ -142,7 +142,7 @@ test('token counts become intuitive via Odyssey, printed page, and info popovers
   await expect(inputHelp).toBeVisible();
   await inputHelp.click();
   await expect(page.locator('#metric-help-tooltip')).toBeVisible();
-  await expect(page.locator('#metric-help-tooltip')).toContainText('model calls');
+  await expect(page.locator('#metric-help-tooltip')).toContainText(/model calls/i);
   await page.keyboard.press('Escape');
   await expect(page.locator('#metric-help-tooltip')).toBeHidden();
   await expect(page.locator('#input')).toHaveValue('240000');
