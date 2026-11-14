@@ -37,6 +37,7 @@ test('guided task economics react to controls',async({page})=>{
   await expect(page.locator('#personal-tasks')).not.toHaveText('—');
   await page.locator('#scale-company').click();
   await expect(page.locator('#macro-revenue')).not.toHaveText('—');
+  await page.locator('#macro-settings summary').click();
   await page.locator('#macro-paid-users').fill('0');
   await page.locator('#macro-free-users').fill('0');
   await page.locator('#macro-api-tasks').fill('0');
