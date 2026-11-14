@@ -4,7 +4,58 @@ Research-based public calculator comparing AI **consumer subscription payments**
 
 Published by Upstate Data Systems LLC. Designed to run source monitoring and static research exports on **purgatory01** (lightweight Oracle Cloud AMD64 VM), then display a self-contained calculator on upstatedatasystems.com/ai-economics.
 
-**Status: v0.3 local test prototype. Not deployed to purgatory01 or Vercel.** No AI models are run, and no paid AI APIs or GPUs are required.
+**Status: v0.4 guided local test prototype. Not deployed to purgatory01 or Vercel.** No AI models are run, and no paid AI APIs or GPUs are required.
+
+## What's new in v0.4 — guided single-pane application
+
+The old vertically scrolling dashboard has been replaced with a five-step, full-viewport estimator:
+
+1. **Choose task** — question, brainstorming, agentic coding or your own prompt.
+2. **Size the work** — total model calls, average input/output tokens, cached fraction and monthly repeat count.
+3. **Estimate cost** — provider/API retail comparator, paid/free plan, owned/rented eight-GPU proxy, costs and sensitivity.
+4. **Explore scale** — personal monthly usage or hypothetical company-scale day/month/year revenue-versus-serving scenarios.
+5. **Inspect evidence** — research sources, separate financial disclosures and research-collector health.
+
+The live per-task cost summary stays on screen while navigating. On narrow screens the app uses a compact summary and a horizontal step bar. Only the selected step has an internal scroll region; the entire page does not require long scrolling.
+
+**Research collector corrections from the Nov 14 purgatory01 diagnostics:**
+
+- Known automated-403 sources (OpenAI plan, BLS wage page, SEC developer page) are explicitly **manual** until official structured adapters are ready, instead of repeatedly failing the timer.
+- Other structured/unsupported content (EIA generic landing page, MLPerf repo page, Uptime PDF) also remains manual rather than generating misleading page-hash alerts.
+- Monitored HTML is reduced to normalized, price-bearing evidence. Dynamic timestamps/scripts and identical price text do **not** cause an alert; changed price evidence gets a **candidate_change** requiring review.
+- Source-specific collection intervals are respected; \`collect --force\` and \`refresh --force\` override the schedule for testing.
+- The legacy raw-byte-hash SQLite history is preserved, but new v2 monitor tables begin fresh rather than treating old false alerts as validated price differences.
+- The numeric research catalog remains unchanged without a reviewed Git commit.
+- Both server and browser can now produce privacy-conscious diagnostic archives/files.
+
+### Upgrade the existing purgatory01 test checkout
+
+If you previously cloned to \`~/ai-economics\`, reconnect over SSH and run:
+
+    cd ~/ai-economics
+    git pull --ff-only
+    PYTHONPATH=src python3 -m unittest discover -s tests -v
+    PYTHONPATH=src python3 -m ai_economics build
+    PYTHONPATH=src python3 -m ai_economics serve --port 8765
+
+Reconnect your original SSH tunnel from Windows and load http://127.0.0.1:8765. The server binds only to loopback. No changes to the live site or public firewall are needed. Use Ctrl+C to stop the preview.
+
+### Collector and diagnostics
+
+After stopping the web preview (optional; collection can also run while the preview is running, but refresh the page to see its new status):
+
+    cd ~/ai-economics
+    PYTHONPATH=src python3 -m ai_economics refresh --force
+    PYTHONPATH=src python3 -m ai_economics health
+    PYTHONPATH=src python3 -m ai_economics diagnostics --output ~/ai-economics-v04-diagnostics.tar.gz
+
+A manual source is intentionally not fetched. A source reporting **blocked** or **unverifiable** is not proof of a price change; only **candidate_change** means normalized price evidence changed, and still requires review. Temporary network failures remain **fetch_error** and cause the refresh command to exit with code 2.
+
+The diagnostics archive includes test results, repo commit, asset checks, source status and last collection metadata, **not** SSH keys, secret environment variables, private prompts, or unrelated service data. Review it before sharing.
+
+For browser-side problems, click **Diagnostics** in the application's top bar; it downloads \`ai-economics-browser-diagnostics.json\` with the active step, selected workload's numeric inputs, calculated costs, and caught JavaScript errors. It deliberately omits pasted questions and answers.
+
+**CI-only browser tests** exercise the five-step app in desktop and mobile Chromium. Installing this test suite on the tiny OCI host is unnecessary; its Python-only runtime is unchanged.
 
 ## What's new in v0.3
 
@@ -81,7 +132,7 @@ After reviewing the local preview, install a separate production copy. The syste
     sudo journalctl -u ai-economics-refresh.service -n 80 --no-pager
     PYTHONPATH=src python3 -m ai_economics health
 
-The timer executes daily at approximately 04:15 UTC, with randomized delay. Each run checks the upstream public sources and stores SHA-256 digests, timestamps and status in a local SQLite database. The job is capped at 160 MB RAM and 40% CPU and does not bind a network port. Failed fetches do not erase last-reviewed pricing.
+The timer executes daily at approximately 04:15 UTC, with randomized delay. Each run respects each source's frequency and records normalized price-bearing evidence digests, timestamps and status in a local SQLite database. Manual sources are not repeatedly fetched. The job is capped at 160 MB RAM and 40% CPU and does not bind a network port. Failed fetches do not erase last-reviewed pricing.
 
 Important: for phase one, this is an **automated change monitor**. Pricing facts are kept in version-controlled research/catalog.json and are not silently overwritten when a supplier edits a page. Review updated sources, update reviewed facts, and optionally acknowledge a checked source with:
 
@@ -121,8 +172,8 @@ See research/catalog.json for directly linked official pricing pages, AWS, EIA, 
 - research/catalog.json — reviewed facts, source registry, assumed cost parameters
 - src/ai_economics/model.py — dependency-free task and macro reference cost models
 - src/ai_economics/app.py — source hashing, SQLite monitoring, static export and local preview
-- site/ — standalone task/workload calculator, hypothetical macro explorer and financial disclosures
-- tests/ — offline Python and JavaScript parity/unit/generation checks
+- site/ — guided viewport-sized estimator, hypothetical macro explorer, research evidence, browser diagnostic download
+- tests/ — Python monitor/model regression tests, JavaScript parity, CI-only desktop/mobile Playwright smoke tests
 - systemd/ — optional unprivileged scheduled job on OCI
 - scripts/ — server preparation and local preview convenience script
 - .github/workflows/ci.yml — automated offline checks
