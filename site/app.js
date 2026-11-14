@@ -1,380 +1,400 @@
-/* AI Economics v0.3 — UI. User input stays in the browser. */
+/* AI Economics v0.4 — single-pane guided estimator.
+ * All user-entered text is processed locally; diagnostics omit prompt contents.
+ */
 "use strict";
 (function () {
-  var core = window.AiEconomicsCore;
-  var data = null, samples = [], chosen = "quick", currentPeriod = "month";
-  var latest = null, latestMacro = null;
-  var $ = function (id) {return document.getElementById(id);};
-  var integer = new Intl.NumberFormat("en-US", {maximumFractionDigits:0});
-  function val(id) {return Number($(id).value);}
-  function text(id,v) {$(id).textContent=String(v);}
-  function amount(n) {
-    if (!Number.isFinite(n)) return "—";
-    var absolute = Math.abs(n);
-    if (absolute>=1e12) return "$"+(n/1e12).toFixed(2)+"T";
-    if (absolute>=1e9) return "$"+(n/1e9).toFixed(2)+"B";
-    if (absolute>=1e6) return "$"+(n/1e6).toFixed(2)+"M";
+  const core = window.AiEconomicsCore;
+  const $ = (id) => document.getElementById(id);
+  const steps = ["task", "usage", "economics", "scale", "evidence"];
+  const meta = {
+    task: ["Choose a starting point", "Start with a familiar task, then adjust the workload until it resembles your own."],
+    usage: ["Size the work", "Describe all the model calls and tokens needed to finish one complete task."],
+    economics: ["Estimate the serving cost", "Compare public API retail with hypothetical compute and operating expenses."],
+    scale: ["Explore the bigger picture", "Move from your monthly usage to a hypothetical company-scale scenario."],
+    evidence: ["Verify the evidence", "Inspect published sources, separate financial disclosures, and collector diagnostics."]
+  };
+  const formatting = new Intl.NumberFormat("en-US", {maximumFractionDigits: 0});
+  let data=null,health=null,samples=[],selected="quick",step="task";
+  let scaleMode="personal",period="month",evidenceTab="sources",result=null,macroResult=null;
+  const errors=[];
+  function logError(message) {errors.push({at:new Date().toISOString(),message:String(message).slice(0,500)});if(errors.length>30) errors.shift();}
+  window.addEventListener("error", e=>logError(e.message || "Unidentified script error"));
+  window.addEventListener("unhandledrejection", e=>logError(String(e.reason && e.reason.message || e.reason)));
+  const number=(id,fallback=0) => {
+    const e=$(id); if(!e) return fallback;
+    const n=Number(e.value);if(!Number.isFinite(n))return fallback;
+    const min=e.min!==""?Number(e.min):-Infinity,max=e.max!==""?Number(e.max):Infinity;
+    return Math.max(min,Math.min(max,n));
+  };
+  const set=(id,t)=>{const e=$(id);if(e)e.textContent=String(t);};
+  const count=(n)=>{
+    n=Number(n)||0; const x=Math.abs(n);
+    if(x>=1e12)return (n/1e12).toFixed(2)+"T";
+    if(x>=1e9)return (n/1e9).toFixed(2)+"B";
+    if(x>=1e6)return (n/1e6).toFixed(2)+"M";
+    return formatting.format(n);
+  };
+  const money=(n)=>{
+    if(!Number.isFinite(n))return "—";
+    const abs=Math.abs(n);
+    if(abs>=1e12)return "$"+(n/1e12).toFixed(2)+"T";
+    if(abs>=1e9)return "$"+(n/1e9).toFixed(2)+"B";
+    if(abs>=1e6)return "$"+(n/1e6).toFixed(2)+"M";
     return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",
-      minimumFractionDigits:2, maximumFractionDigits:absolute>0 && absolute<1 ? 5 : 2}).format(n);
+      minimumFractionDigits:2,maximumFractionDigits:abs>0&&abs<1?5:2}).format(n);
+  };
+  function element(tag,cls,content) {
+    const e=document.createElement(tag);
+    if(cls)e.className=cls;
+    if(content!==undefined)e.textContent=String(content);
+    return e;
   }
-  function count(n) {
-    if (n>=1e12) return (n/1e12).toFixed(2)+"T";
-    if (n>=1e9) return (n/1e9).toFixed(2)+"B";
-    if (n>=1e6) return (n/1e6).toFixed(2)+"M";
-    return integer.format(n);
+  function currentSample(){return samples.find(w=>w.id===selected);}
+  function go(where){
+    if(!steps.includes(where))return;
+    step=where;
+    document.querySelectorAll(".screen").forEach(s=>s.hidden=s.dataset.screen!==where);
+    document.querySelectorAll("[data-go]").forEach(b=>{
+      const active=b.dataset.go===where;b.classList.toggle("selected",active);
+      if(active)b.setAttribute("aria-current","step");else b.removeAttribute("aria-current");
+    });
+    const i=steps.indexOf(where),n=i+1;
+    set("stage-title",meta[where][0]);set("stage-description",meta[where][1]);
+    set("stage-caption","STEP "+String(n).padStart(2,"0")+" OF 05");
+    set("stage-pager",String(n).padStart(2,"0")+" / 05");
+    $("previous").disabled=i===0;
+    set("next",i===steps.length-1?"Back to start ↺":"Continue →");
+    document.querySelectorAll("#progress-dots i").forEach((d,k)=>d.classList.toggle("active",k===i));
+    $("stage-scroll").scrollTop=0;
+    if(where==="evidence")renderEvidence();
+    if(where==="scale")renderScale();
   }
-  function node(tag,className,content) {
-    var n=document.createElement(tag);
-    if(className) n.className=className;
-    if(content!==undefined) n.textContent=content;
-    return n;
-  }
-  function chosenSample() {return samples.find(function(w){return w.id===chosen;});}
-  function sourceRows() {
-    var parent=$("sources");parent.replaceChildren();
-    data.sources.forEach(function(s) {
-      var row=node("div","source");
-      var a=node("a","",s.name);
-      a.href=s.url;a.target="_blank";a.rel="noopener noreferrer";
-      row.append(a,node("span","",s.kind));
-      parent.append(row);
+  function loadSamples(){
+    const icons={"quick":"?","brainstorm":"↺","coding":"</>","custom":"✎"};
+    const root=$("example-options");root.replaceChildren();
+    samples.forEach(w=>{
+      const b=element("button","example-option");b.type="button";b.dataset.sample=w.id;
+      const ico=element("span","example-ico",icons[w.id]||"•");
+      const content=element("span");content.append(element("strong","",w.name),
+        element("small","",w.subtitle));
+      b.append(ico,content);
+      b.addEventListener("click",()=>choose(w.id));
+      root.append(b);
     });
   }
-  function bars(target,rows) {
-    var box=$(target);box.replaceChildren();
-    var biggest=Math.max(0.00001,...rows.map(function(row){return Math.abs(row[1]);}));
-    rows.forEach(function(row){
-      var container=node("div","bar-item");
-      var title=node("div","bar-title");
-      title.append(node("span","",row[0]),node("strong","",amount(row[1])));
-      var track=node("div","track"),fill=node("div","fill "+(row[2]||""));
-      fill.style.width=(100*Math.max(0,row[1])/biggest).toFixed(2)+"%";
-      track.append(fill);container.append(title,track);box.append(container);
+  function choose(id){
+    if(!samples.find(w=>w.id===id))return;
+    selected=id;
+    const w=currentSample();
+    document.querySelectorAll(".example-option").forEach(b=>{
+      const active=b.dataset.sample===id;
+      b.classList.toggle("selected",active);b.setAttribute("aria-pressed",String(active));
     });
-  }
-  function setupExamples() {
-    var target=$("examples");
-    samples.forEach(function(w){
-      var button=node("button","example-card");
-      button.type="button";button.dataset.id=w.id;
-      button.append(node("small","sample-kind",w.kind));
-      button.append(node("strong","",w.name));
-      button.append(node("span","",w.subtitle));
-      button.addEventListener("click",function(){setExample(w.id);});
-      target.append(button);
-    });
-  }
-  function setExample(id) {
-    chosen=id;
-    var w=chosenSample();
-    Array.from($("examples").children).forEach(function(button){
-      var active=button.dataset.id===id;
-      button.classList.toggle("selected",active);
-      button.setAttribute("aria-pressed",active?"true":"false");
-    });
-    text("example-name",w.name);
-    text("example-desc",w.description);
-    text("example-prompt",w.example_prompt || "Paste a question or a complete prompt below.");
-    text("shape-turns",count(w.user_turns));
-    text("shape-calls",count(w.model_calls));
-    text("shape-tools",count(w.tool_executions));
-    $("custom-text").hidden=(id!=="custom");
-    $("model-calls").value=w.model_calls;
-    $("input").value=w.input_tokens_per_call;
-    $("output").value=w.visible_output_tokens_per_call;
+    set("chosen-title",w.name);set("chosen-description",w.description);
+    set("chosen-prompt",w.example_prompt||"Paste a question and optionally its answer on the next step.");
+    set("chosen-turns",count(w.user_turns));set("chosen-calls",count(w.model_calls));
+    set("chosen-tools",count(w.tool_executions));
+    $("model-calls").value=w.model_calls;$("repeats").value=w.tasks_per_month;
+    $("input").value=w.input_tokens_per_call;$("output").value=w.visible_output_tokens_per_call;
     $("cache").value=Math.round(w.cached_input_fraction*100);
     $("reasoning").value=w.billed_output_multiplier;
-    $("repeats").value=w.tasks_per_month;
-    $("extra-tool-cost").value="";
-    if(id==="custom") updateCustom(false);
-    render();
+    $("custom-box").hidden=id!=="custom";
+    if(id==="custom")updateCustom();
+    recalc();
   }
-  function updateCustom(shouldRender) {
-    if(chosen!=="custom") return;
-    var prompt=$("question-text").value,answer=$("answer-text").value;
-    var qt=core.textTokenEstimate(prompt),at=core.textTokenEstimate(answer);
-    var context=Math.max(0,val("context-tokens"));
-    if(prompt.trim()) $("input").value=qt+context;
-    else $("input").value=300;
-    if(answer.trim()) $("output").value=at;
-    else $("output").value=320;
-    text("question-count",prompt.trim()
-      ?count(qt)+" estimated prompt tokens + "+count(context)+" context allowance"
-      :"No prompt pasted; using 300 input tokens");
-    text("answer-count",answer.trim()?count(at)+" estimated visible output tokens":
-      "No answer pasted; using 320 estimated visible output tokens");
-    if(shouldRender)render();
+  function updateCustom(){
+    if(selected!=="custom")return;
+    const prompt=$("question-text").value,answer=$("answer-text").value;
+    if(prompt.trim())$("input").value=core.textTokenEstimate(prompt)+number("context-tokens",250);
+    if(answer.trim())$("output").value=core.textTokenEstimate(answer);
   }
-  function taskConfig() {
-    var a={};
-    Object.keys(data.assumptions).forEach(function(k) {
-      if($(k)) a[k]=val(k);
-    });
-    var rawTool=$("extra-tool-cost").value.trim();
+  function taskProfile(){
+    const w=currentSample();
+    return {...w,model_calls:Math.max(1,Math.round(number("model-calls",1))),
+      input_tokens_per_call:Math.round(number("input")),
+      visible_output_tokens_per_call:Math.round(number("output")),
+      cached_input_fraction:number("cache")/100,
+      billed_output_multiplier:number("reasoning",1)};
+  }
+  function settings(){
+    const assumptions={};
+    for(const key of Object.keys(data.assumptions)){
+      if($(key)) assumptions[key]=number(key,data.assumptions[key].value);
+    }
     return {paid:$("plan").value==="paid",ownership:$("ownership").value,
-      repeats:val("repeats"),extraToolCost:rawTool===""?null:Number(rawTool),
-      assumptions:a};
+      repeats:Math.max(1,Math.round(number("repeats",1))),assumptions};
   }
-  function activeProfile() {
-    var sample=chosenSample();
-    return Object.assign({},sample,{
-      model_calls:Math.max(1,Math.floor(val("model-calls"))),
-      input_tokens_per_call:Math.max(0,Math.floor(val("input"))),
-      visible_output_tokens_per_call:Math.max(0,Math.floor(val("output"))),
-      cached_input_fraction:Math.max(0,Math.min(1,val("cache")/100)),
-      billed_output_multiplier:Math.max(1,val("reasoning")),
-      tasks_per_month:Math.max(1,Math.floor(val("repeats")))
-    });
+  function recalc(){
+    if(!data)return;
+    try{
+      const profile=taskProfile(),cfg=settings(),provider=$("provider").value;
+      result=core.task(data,provider,profile,cfg);
+      set("side-task",currentSample().name);
+      set("side-task-kind",currentSample().kind.toUpperCase());
+      set("side-provider",result.provider.name+" · "+result.provider.model_name);
+      set("side-total",money(result.total));set("side-api",money(result.api));
+      set("side-subscription",money(result.subscription_share));
+      set("side-calls",count(result.calls));
+      set("side-tokens",count(result.tokens.input+result.tokens.billed_output));
+      set("side-cost-label","Inference + modeled operations / task");
+      set("side-disclaimer",profile.tool_executions>0
+        ?count(profile.tool_executions)+" external tool executions are unpriced. This is NOT a complete task expense."
+        :"This is an illustrative cost model, not a measurement of the provider's actual expenses.");
+      const tok=result.tokens;
+      set("tokens-input",count(tok.input));set("tokens-cached",count(tok.cached));
+      set("tokens-output",count(tok.billed_output));set("tokens-hidden",count(tok.hidden_output));
+      const bar=$("token-bar");bar.replaceChildren();
+      const pieces=[["uncached",tok.uncached],["cached",tok.cached],["output",tok.billed_output]];
+      const total=pieces.reduce((acc,p)=>acc+p[1],0);
+      for(const [label,value] of pieces){
+        const seg=element("div",label);
+        seg.style.width=(total?value/total*100:0).toFixed(3)+"%";
+        seg.title=label+": "+count(value)+" tokens";
+        bar.append(seg);
+      }
+      set("cost-api",money(result.api));set("cost-infra",money(result.infra));
+      set("cost-ops",money(result.ops));set("cost-total",money(result.total));
+      const ranges=core.sensitivity(data,provider,profile,cfg);
+      set("cost-low",money(ranges.optimistic));set("cost-base",money(ranges.baseline));
+      set("cost-high",money(ranges.conservative));
+      set("personal-tasks",count(result.repeats));
+      set("personal-calls",count(result.calls*result.repeats));
+      set("personal-subscription",money(result.subscription_month));
+      set("personal-api",money(result.monthly_api));
+      set("personal-cost",money(result.monthly_serving));
+      set("personal-margin",money(result.monthly_consumer_margin));
+      set("rail-data-status","References "+data.reviewed_at);
+      if(step==="scale")renderScale();
+    }catch(err){
+      logError("Recalculation: "+String(err.message||err));
+      set("side-total","Check input values");
+    }
   }
-  function renderTokenStats(t) {
-    var fields=[
-      ["Input tokens",t.input,"Across all model calls"],
-      ["Cached input",t.cached,"Subset of input total"],
-      ["Uncached input",t.uncached,"Processed at full input rate"],
-      ["Visible output",t.visible_output,"Generated text in this scenario"],
-      ["Additional output",t.hidden_output,"Modeled reasoning/tool instructions"],
-      ["Billed output total",t.billed_output,"Used for API retail comparison"]
-    ];
-    var root=$("token-stats");root.replaceChildren();
-    fields.forEach(function(f){
-      var card=node("div","token-stat");
-      card.append(node("strong","",count(f[1])),node("span","",f[0]),node("small","",f[2]));
-      root.append(card);
-    });
-    var bar=$("token-bar");bar.replaceChildren();
-    var slices=[["uncached",t.uncached],["cached",t.cached],["output",t.billed_output]];
-    var total=slices.reduce(function(sum,s){return sum+s[1];},0);
-    slices.forEach(function(s){
-      var segment=node("div","token-segment "+s[0]);
-      segment.style.width=(total?100*s[1]/total:0)+"%";
-      segment.title=s[0]+": "+count(s[1])+" tokens";
-      bar.append(segment);
-    });
+  function initProviderSelect(){
+    for(const p of data.providers){
+      const a=element("option","",p.name+" · "+p.model_name);a.value=p.id;$("provider").append(a);
+      const b=element("option","",p.name);b.value=p.id;$("macro-provider").append(b);
+    }
   }
-
-  function renderComparison() {
-    var rows=$("comparison-rows");rows.replaceChildren();
-    var cfg=taskConfig(),provider=$("provider").value;
-    samples.filter(function(w){return w.id!=="custom";}).forEach(function(w) {
-      var result=core.task(data,provider,w,{
-        paid:true,ownership:cfg.ownership,assumptions:cfg.assumptions,
-        repeats:w.tasks_per_month,extraToolCost:null
-      });
-      var tr=node("tr",chosen===w.id?"active":"");
-      var cell=node("td");
-      var btn=node("button","table-choice",w.name);
-      btn.type="button";btn.addEventListener("click",function(){setExample(w.id);});
-      cell.append(btn);tr.append(cell);
-      [w.user_turns,result.calls,result.tokens.input,result.tokens.billed_output]
-        .forEach(function(n){tr.append(node("td","",count(n)));});
-      tr.append(node("td","",amount(result.api)),node("td","",amount(result.total)));
-      rows.append(tr);
-    });
+  function initMacro(){
+    for(const id of ["macro-paid-profile","macro-free-profile","macro-api-profile"]){
+      for(const p of samples.filter(w=>w.id!=="custom")){
+        const option=element("option","",p.name);option.value=p.id;$(id).append(option);
+      }
+    }
+    macroDefaults();
   }
-  function render() {
-    if(!data) return;
-    var profile=activeProfile(),cfg=taskConfig();
-    var provider=$("provider").value;
-    var result=core.task(data,provider,profile,cfg);
-    latest={result:result,profile:profile,provider:provider,cfg:cfg};
-    var sensitivity=core.sensitivity(data,provider,profile,cfg);
-    text("result-heading","Cost of "+chosenSample().name.toLowerCase());
-    text("task-subscription",amount(result.subscription_share));
-    text("task-api",amount(result.api));
-    text("task-infra",amount(result.infra));
-    text("task-ops",amount(result.ops));
-    text("task-total",amount(result.task_total_if_specified===null?result.total:result.task_total_if_specified));
-    text("task-total-label",result.tool_cost===null
-      ?"Modeled inference + operations only"
-      :"Modeled inference, operations and entered tools");
-    text("task-share",amount(result.subscription_share));
-    text("call-api",amount(result.api/result.calls));
-    text("tool-warning",result.tool_cost===null
-      ?(profile.tool_executions>0
-        ? count(profile.tool_executions)+" tool executions in this example have no known prices and are excluded. Total real execution cost could be higher."
-        :"No external tool cost included. Other routing and non-text services remain unpriced.")
-      :"You entered "+amount(result.tool_cost)+" per task for external execution. This is user supplied, not independently researched.");
-    text("result-caveat","Workload inputs are an illustrative scenario, not observed usage. The user receives a fixed subscription for their payment; the per-task subscription share is a simple allocation, NOT a charge per request. The model currently uses the same illustrative GPU performance proxy across all providers.");
-    bars("bars",[
-      ["Subscription allocation",result.subscription_share,""],
-      ["Equivalent API retail",result.api,"api"],
-      ["Compute infrastructure",result.infra,"infra"],
-      ["Operations/admin",result.ops,"ops"]
-    ]);
-    text("low",amount(sensitivity.optimistic));
-    text("base",amount(sensitivity.baseline));
-    text("high",amount(sensitivity.conservative));
-    renderTokenStats(result.tokens);
-    renderComparison();
-    text("workload-explainer",
-      chosen==="coding" ? "This example assumes "+count(profile.model_calls)+" model calls across "+count(profile.user_turns)+" user turns, plus "+count(profile.tool_executions)+" separate tool executions. Every model call reprocesses some code and context. Build and deployment resources are not included without an explicit tool-cost estimate."
-      : chosen==="brainstorm" ? "The model makes "+count(profile.model_calls)+" calls across "+count(profile.user_turns)+" turns. Later prompts may include earlier answers and instructions, so input tokens accumulate beyond the user's newly typed words."
-      : chosen==="custom" ? "Your pasted text is converted into an approximate visible-token count; model routing, hidden context, caching and internal tool calls can differ considerably."
-      : "One user question generally produces one answer in this scenario. That is one model call, with modest input context and output tokens. Real requests may use additional unseen routing or tools.");
-    text("month-label",count(result.repeats)+" completed tasks");
-    text("month-consumer",amount(result.subscription_month));
-    text("month-api",amount(result.monthly_api));
-    text("month-model",amount(result.monthly_serving));
-    text("month-diff",amount(result.monthly_consumer_margin));
+  function macroDefaults(){
+    const d=data.macro.profiles[$("macro-provider").value];if(!d)return;
+    const vals={
+      "macro-paid-users":d.paid_users,"macro-paid-tasks":d.paid_tasks_per_user,
+      "macro-free-users":d.free_users,"macro-free-tasks":d.free_tasks_per_user,
+      "macro-api-tasks":d.api_tasks_per_month,"macro-ad-arpu":d.ad_usd_per_free_user_month,
+      "macro-api-realization":d.api_realization*100,
+      "macro-other-annual":d.additional_annual_expense_usd,
+      "macro-paid-profile":d.paid_profile,"macro-free-profile":d.free_profile,
+      "macro-api-profile":d.api_profile
+    };
+    for(const [id,value] of Object.entries(vals))$(id).value=value;
+    renderScale();
   }
-  function macroProfiles(target) {
-    var select=$(target);
-    samples.filter(function(w){return w.id!=="custom";}).forEach(function(w){
-      var option=node("option","",w.name);
-      option.value=w.id;select.append(option);
-    });
-  }
-  function loadMacroValues(providerId) {
-    var d=data.macro.profiles[providerId];
-    if(!d)return;
-    $("macro-paid-users").value=d.paid_users;
-    $("macro-free-users").value=d.free_users;
-    $("macro-paid-tasks").value=d.paid_tasks_per_user;
-    $("macro-free-tasks").value=d.free_tasks_per_user;
-    $("macro-api-tasks").value=d.api_tasks_per_month;
-    $("macro-paid-profile").value=d.paid_profile;
-    $("macro-free-profile").value=d.free_profile;
-    $("macro-api-profile").value=d.api_profile;
-    $("macro-ad-arpu").value=d.ad_usd_per_free_user_month;
-    $("macro-api-realization").value=d.api_realization*100;
-    $("macro-other-annual").value=d.additional_annual_expense_usd;
-    $("macro-ownership").value="cloud";
-    renderMacro();
-  }
-  function macroConfig() {
+  function macroConfig(){
     return {
-      paid_users:val("macro-paid-users"),free_users:val("macro-free-users"),
-      paid_tasks_per_user:val("macro-paid-tasks"),free_tasks_per_user:val("macro-free-tasks"),
-      api_tasks_per_month:val("macro-api-tasks"),
+      paid_users:number("macro-paid-users"),free_users:number("macro-free-users"),
+      paid_tasks_per_user:number("macro-paid-tasks"),free_tasks_per_user:number("macro-free-tasks"),
+      api_tasks_per_month:number("macro-api-tasks"),
       paid_profile:$("macro-paid-profile").value,
       free_profile:$("macro-free-profile").value,
       api_profile:$("macro-api-profile").value,
-      ad_usd_per_free_user_month:val("macro-ad-arpu"),
-      api_realization:val("macro-api-realization")/100,
-      additional_annual_expense_usd:val("macro-other-annual"),
+      ad_usd_per_free_user_month:number("macro-ad-arpu"),
+      api_realization:number("macro-api-realization")/100,
+      additional_annual_expense_usd:number("macro-other-annual"),
       ownership:$("macro-ownership").value
     };
   }
-  function renderReported(providerId) {
-    var root=$("reported");root.replaceChildren();
-    var relevant=data.macro.reported_context.filter(function(item){return item.provider===providerId;});
-    if(!relevant.length) {root.append(node("p","muted","No vetted disclosures for this provider."));return;}
-    relevant.forEach(function(item){
-      var box=node("article","reported-card");
-      var a=node("a","",item.metric);
-      a.href=item.source_url;a.target="_blank";a.rel="noopener noreferrer";
-      box.append(a,node("strong","",amount(item.value_usd)),
-        node("small","",item.period),
-        node("p","small muted",item.scope),
-        node("p","small muted",item.note));
-      root.append(box);
-    });
-  }
-  function renderMacro() {
-    if(!data || !data.macro)return;
-    var providerId=$("macro-provider").value;
-    if(!providerId)return;
-    var config=macroConfig(),result=core.macro(data,providerId,samples,config);
-    latestMacro={result:result,provider:providerId,config:config};
-    var period=result[currentPeriod];
-    text("macro-revenue",amount(period.revenue));
-    text("macro-serving",amount(period.serving_cost));
-    text("macro-extra",period.other_expense===0?"Not modeled":amount(period.other_expense));
-    text("macro-balance",amount(period.estimated_balance));
-    bars("macro-revenue-bars",[
-      ["Paid subscriptions",period.subscriptions,""],
-      ["Assumed free-user ads",period.ads,"ops"],
-      ["Realized API billing",period.api_revenue,"api"]
-    ]);
-    bars("macro-cost-bars",[
-      ["Consumer serving",period.consumer_serving,"infra"],
-      ["API serving",period.api_serving,"ops"],
-      ["Extra annual allowance",period.other_expense,"api"]
-    ]);
-    text("macro-tasks",count(result.paid_tasks_month+result.free_tasks_month+result.api_tasks_month));
-    text("macro-calls",count(result.total_model_calls_month));
-    text("macro-nodes",integer.format(Math.ceil(result.eight_gpu_systems_required)));
-    document.querySelectorAll(".period-button").forEach(function(b){
-      var active=b.dataset.period===currentPeriod;
-      b.classList.toggle("selected",active);b.setAttribute("aria-pressed",active?"true":"false");
-    });
-    renderReported(providerId);
-  }
-  function init() {
-    samples=data.workloads.examples;
-    var options=$("provider"),macro=$("macro-provider");
-    data.providers.forEach(function(p) {
-      var label=p.name+" · "+p.model_name;
-      var first=node("option","",label);first.value=p.id;options.append(first);
-      var second=node("option","",p.name);second.value=p.id;macro.append(second);
-    });
-    ["macro-paid-profile","macro-free-profile","macro-api-profile"].forEach(macroProfiles);
-    Object.keys(data.assumptions).forEach(function(k){
-      if($(k))$(k).value=data.assumptions[k].value;
-    });
-    setupExamples();
-    [
-      "provider","plan","ownership","model-calls","input","output","cache","reasoning",
-      "repeats","extra-tool-cost","gpu_effective_tokens_s","utilization",
-      "fleet_nodes","operations_fte","fully_loaded_salary_usd","corporate_overhead_fraction"
-    ].forEach(function(id){$(id).addEventListener("input",render);$(id).addEventListener("change",render);});
-    ["question-text","answer-text","context-tokens"].forEach(function(id){
-      $(id).addEventListener("input",function(){updateCustom(true);});
-    });
-    $("reset").addEventListener("click",function(){setExample(chosen);});
-    $("copy").addEventListener("click",async function() {
-      if(!latest) return;
-      var r=latest.result;
-      var lines=[
-        "AI Economics illustrative task estimate — "+chosenSample().name,
-        "Model: "+r.provider.name+" / "+r.provider.model_name,
-        "Turns: "+r.turns+"; model calls: "+r.calls+"; tool executions: "+r.tools,
-        "Input: "+Math.round(r.tokens.input)+" tokens; billed output: "+Math.round(r.tokens.billed_output)+" tokens",
-        "Consumer subscription allocation: "+amount(r.subscription_share),
-        "Equivalent API retail: "+amount(r.api),
-        "Modeled infrastructure: "+amount(r.infra),
-        "Allocated operations: "+amount(r.ops),
-        "Modeled inference subtotal: "+amount(r.total),
-        "External execution: "+(r.tool_cost===null?"unknown and excluded":amount(r.tool_cost)),
-        "Not a measurement of actual provider costs or usage.",
-        "https://github.com/upstatedatasystems-llc/ai-economics"
-      ];
-      try {await navigator.clipboard.writeText(lines.join("\n"));text("copy","Copied");}
-      catch (_) {text("copy","Copy unavailable");}
-    });
-    $("macro-provider").addEventListener("change",function(){loadMacroValues($("macro-provider").value);});
-    $("macro-reset").addEventListener("click",function(){loadMacroValues($("macro-provider").value);});
-    ["macro-ownership","macro-paid-users","macro-free-users","macro-paid-tasks","macro-free-tasks",
-      "macro-api-tasks","macro-paid-profile","macro-free-profile","macro-api-profile",
-      "macro-ad-arpu","macro-api-realization","macro-other-annual"
-    ].forEach(function(id){$(id).addEventListener("input",renderMacro);$(id).addEventListener("change",renderMacro);});
-    document.querySelectorAll(".period-button").forEach(function(button){
-      button.addEventListener("click",function(){currentPeriod=button.dataset.period;renderMacro();});
-    });
-    text("reviewed","Reference date: "+data.reviewed_at);
-    sourceRows();
-    fetch("./data/health.json",{cache:"no-store"}).then(function(response){return response.ok?response.json():null;})
-      .then(function(health){
-        if(!health || !health.last_collection){text("monitor","Not checked by server yet");return;}
-        var flags=health.sources.filter(function(s){return s.status==="review_required";}).length;
-        var failures=health.sources.filter(function(s){return s.status==="fetch_error";}).length;
-        text("monitor","Last check "+new Date(health.last_collection).toLocaleString()+" · "+flags+" review flags · "+failures+" failures");
-      }).catch(function(){text("monitor","Source status unavailable");});
-    $("loading").hidden=true;$("dashboard").hidden=false;
-    setExample("quick");
-    loadMacroValues($("macro-provider").value);
-  }
-  fetch("./data/research.json",{cache:"no-store"}).then(function(res){
-    if(!res.ok)throw new Error("Research snapshot not found. Run the Python build command.");
-    return res.json();
-  }).then(function(value){
-    data=value;
-    if(data.schema_version!==1 || !data.workloads || !data.macro) {
-      throw new Error("Unsupported snapshot. Rebuild from the current repository.");
+  function renderScale(){
+    if(!data||!data.macro)return;
+    $("personal-view").hidden=scaleMode!=="personal";
+    $("company-view").hidden=scaleMode!=="company";
+    $("scale-personal").classList.toggle("selected",scaleMode==="personal");
+    $("scale-company").classList.toggle("selected",scaleMode==="company");
+    $("scale-personal").setAttribute("aria-pressed",String(scaleMode==="personal"));
+    $("scale-company").setAttribute("aria-pressed",String(scaleMode==="company"));
+    if(scaleMode==="company"){
+      try{
+        macroResult=core.macro(data,$("macro-provider").value,samples,macroConfig());
+        const p=macroResult[period];
+        set("macro-revenue",money(p.revenue));set("macro-serving",money(p.serving_cost));
+        set("macro-extra",p.other_expense===0?"Not modeled":money(p.other_expense));
+        set("macro-balance",money(p.estimated_balance));
+        set("macro-tasks",count(macroResult.paid_tasks_month+macroResult.free_tasks_month+macroResult.api_tasks_month));
+        set("macro-calls",count(macroResult.total_model_calls_month));
+        set("macro-nodes",count(Math.ceil(macroResult.eight_gpu_systems_required)));
+      }catch(err){logError("Macro: "+String(err.message||err));set("macro-revenue","Check inputs");}
     }
-    init();
-  }).catch(function(err){
-    $("loading").hidden=true;$("error").hidden=false;
-    text("error","Unable to load AI Economics: "+String(err.message||err));
-  });
+    document.querySelectorAll(".period").forEach(button=>{
+      const active=button.dataset.period===period;
+      button.classList.toggle("selected",active);button.setAttribute("aria-pressed",String(active));
+    });
+  }
+  function renderSources(){
+    const root=$("sources");root.replaceChildren();
+    for(const s of data.sources){
+      const item=element("div","source-item");
+      const a=element("a","",s.name);a.href=s.url;a.target="_blank";a.rel="noopener noreferrer";
+      item.append(a,element("small","",s.kind+" · "+(s.monitor_mode==="manual"?"Manual/structured feed pending":"Price-evidence monitor")));
+      root.append(item);
+    }
+    const financial=$("reported");financial.replaceChildren();
+    for(const r of data.macro.reported_context){
+      const item=element("div","source-item");
+      const a=element("a","",r.provider.toUpperCase()+" — "+r.metric);
+      a.href=r.source_url;a.target="_blank";a.rel="noopener noreferrer";
+      item.append(a,element("small","",money(r.value_usd)+" · "+r.period),
+        element("small","",r.scope),element("small","",r.note));
+      financial.append(item);
+    }
+  }
+  function renderHealth(){
+    const root=$("source-status");root.replaceChildren();
+    const sources=health&&health.sources||[];
+    const nmanual=sources.filter(s=>s.status==="manual_review").length;
+    const ncandidate=sources.filter(s=>s.status==="candidate_change").length;
+    const nblocked=sources.filter(s=>s.status==="blocked").length;
+    const nfailed=sources.filter(s=>s.status==="fetch_error").length;
+    const nnot=sources.filter(s=>s.status==="not_checked").length;
+    set("collector-summary",(health&&health.last_collection
+      ? "Last monitored: "+new Date(health.last_collection).toLocaleString()
+      : "No source-monitoring collection yet")+
+      ". "+nmanual+" manual sources, "+ncandidate+" candidate changes, "+
+      nblocked+" blocked, "+nfailed+" transient failures, "+nnot+" not checked.");
+    for(const source of data.sources){
+      const obs=sources.find(v=>v.id===source.id)||{status:"not_checked"};
+      const item=element("div","source-item");
+      const title=element("a","",source.name);title.href=source.url;title.target="_blank";title.rel="noopener noreferrer";
+      const flag=["candidate_change","blocked","fetch_error","unverifiable"].includes(obs.status)?"warning":
+        ["unchanged","acknowledged"].includes(obs.status)?"good":"";
+      const status=element("span","status-label "+flag,(obs.status||"not_checked").replace(/_/g," "));
+      item.append(title,status);
+      if(obs.checked_at)item.append(element("small","",new Date(obs.checked_at).toLocaleString()));
+      if(obs.error)item.append(element("small","",obs.error));
+      root.append(item);
+    }
+  }
+  function renderEvidence(){
+    const mode=evidenceTab;
+    for(const id of ["sources","financial","health"]){
+      $("evidence-"+id).hidden=mode!==id;
+    }
+    document.querySelectorAll(".evidence-toggle").forEach(btn=>{
+      const active=btn.dataset.evidence===mode;
+      btn.classList.toggle("selected",active);btn.setAttribute("aria-pressed",String(active));
+    });
+    if(mode==="health")renderHealth();
+  }
+  function downloadDiagnostics(){
+    // Never include text input contents or server credentials.
+    const report={
+      schema_version:1,generated_at:new Date().toISOString(),app_version:"0.4",
+      current_step:step,selected_example:selected,provider:$("provider").value,
+      plan:$("plan").value,ownership:$("ownership").value,
+      viewport:{width:window.innerWidth,height:window.innerHeight},
+      workload:{
+        model_calls:number("model-calls"),tasks_per_month:number("repeats"),
+        input_tokens:number("input"),output_tokens:number("output"),
+        cached_fraction:number("cache")/100,output_multiplier:number("reasoning")
+      },
+      estimated_costs:result?{per_task_serving:result.total,api_retail:result.api,
+        monthly_serving:result.monthly_serving}:null,
+      collector_summary:health?health.summary||{}:null,
+      research_generated_at:data?data.generated_at:null,
+      errors:errors.slice(),privacy:"No pasted prompt/answer text or secrets included"
+    };
+    const blob=new Blob([JSON.stringify(report,null,2)],{type:"application/json"});
+    const link=document.createElement("a");
+    const url=URL.createObjectURL(blob);link.href=url;link.download="ai-economics-browser-diagnostics.json";
+    document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url);
+  }
+  function copyEstimate(){
+    if(!result)return;
+    const lines=[
+      "AI Economics v0.4 — illustrative task: "+currentSample().name,
+      "Provider: "+result.provider.name+" / "+result.provider.model_name,
+      "Model calls: "+result.calls+", inputs: "+Math.round(result.tokens.input)+" tokens",
+      "Billed output: "+Math.round(result.tokens.billed_output)+" tokens",
+      "API-equivalent retail: "+money(result.api),
+      "Modeled serving subtotal: "+money(result.total),
+      "Subscription share: "+money(result.subscription_share),
+      "External execution and actual provider spending not known.",
+      "https://github.com/upstatedatasystems-llc/ai-economics"
+    ].join("\n");
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(lines).then(()=>set("copy","Copied")).catch(e=>{logError("Copy: "+e.message);set("copy","Copy unavailable");});
+    }else{set("copy","Clipboard unavailable");}
+  }
+  function bindEvents(){
+    for(const button of document.querySelectorAll("[data-go]"))button.addEventListener("click",()=>go(button.dataset.go));
+    for(const button of document.querySelectorAll(".evidence-toggle"))button.addEventListener("click",()=>{
+      evidenceTab=button.dataset.evidence;renderEvidence();
+    });
+    for(const button of document.querySelectorAll(".period"))button.addEventListener("click",()=>{
+      period=button.dataset.period;renderScale();
+    });
+    $("previous").addEventListener("click",()=>go(steps[Math.max(0,steps.indexOf(step)-1)]));
+    $("next").addEventListener("click",()=>go(steps[Math.min(steps.length-1,steps.indexOf(step)+1)]==="evidence"&&step==="evidence"?"task":steps[Math.min(steps.length-1,steps.indexOf(step)+1)]));
+    $("scale-personal").addEventListener("click",()=>{scaleMode="personal";renderScale();});
+    $("scale-company").addEventListener("click",()=>{scaleMode="company";renderScale();});
+    $("reset").addEventListener("click",()=>choose(selected));
+    $("macro-reset").addEventListener("click",macroDefaults);
+    $("macro-provider").addEventListener("change",macroDefaults);
+    $("copy").addEventListener("click",copyEstimate);
+    $("download-diagnostics").addEventListener("click",downloadDiagnostics);
+    for(const id of ["provider","plan","ownership","model-calls","repeats","input","output",
+      "cache","reasoning","gpu_effective_tokens_s","utilization","fleet_nodes",
+      "operations_fte","fully_loaded_salary_usd","corporate_overhead_fraction"]){
+      $(id).addEventListener("input",recalc);
+      $(id).addEventListener("change",recalc);
+    }
+    for(const id of ["question-text","answer-text","context-tokens"]){
+      $(id).addEventListener("input",()=>{updateCustom();recalc();});
+    }
+    for(const id of ["macro-ownership","macro-paid-users","macro-paid-tasks","macro-free-users",
+      "macro-free-tasks","macro-api-tasks","macro-paid-profile","macro-free-profile",
+      "macro-api-profile","macro-api-realization","macro-ad-arpu","macro-other-annual"]){
+      $(id).addEventListener("input",renderScale);
+      $(id).addEventListener("change",renderScale);
+    }
+  }
+  async function start(){
+    try{
+      if(!core)throw Error("Calculator engine not loaded.");
+      const response=await fetch("./data/research.json",{cache:"no-store"});
+      if(!response.ok)throw Error("Research snapshot missing. Run the Python build command.");
+      data=await response.json();
+      if(data.schema_version!==1||!data.workloads||!data.macro)throw Error("Unsupported snapshot. Rebuild with current code.");
+      samples=data.workloads.examples;
+      initProviderSelect();
+      for(const [key,meta] of Object.entries(data.assumptions)){
+        if($(key))$(key).value=meta.value;
+      }
+      loadSamples();
+      bindEvents();
+      initMacro();
+      renderSources();
+      set("reviewed",data.reviewed_at);
+      for(let i=0;i<steps.length;i++)$("progress-dots").append(element("i",""));
+      $("stage-body").hidden=false;$("loading").hidden=true;
+      choose("quick");go("task");
+      try{
+        const res=await fetch("./data/health.json",{cache:"no-store"});
+        if(res.ok)health=await res.json();
+        renderHealth();
+      }catch(err){logError("Health fetch: "+String(err.message||err));}
+    }catch(err){
+      logError("Start: "+String(err.message||err));
+      $("loading").hidden=true;$("error").hidden=false;
+      set("error","Unable to load calculator: "+String(err.message||err));
+    }
+  }
+  start();
 })();
