@@ -135,7 +135,7 @@ def export(target: Path):
     if destination.resolve() == SITE.resolve():
         raise ValueError("destination must differ from site")
     (destination / "data").mkdir(parents=True, exist_ok=True)
-    for name in ("index.html", "styles.css", "core.js", "app.js", "favicon.svg"):
+    for name in ("index.html", "styles.css", "core.js", "units.js", "explain.js", "app.js", "favicon.svg"):
         shutil.copy2(SITE / name, destination / name)
     (destination / "assets").mkdir(exist_ok=True)
     for name in ("upstate-data-systems-icon.svg", "upstate-data-systems-logo.png"):
@@ -163,7 +163,7 @@ def diagnostics(output: Path):
     """Safe diagnostic tarball: no secret files, private prompts or raw HTML."""
     output.parent.mkdir(parents=True, exist_ok=True)
     assets = {name: (SITE / name).exists() for name in (
-        "index.html", "styles.css", "core.js", "app.js", "favicon.svg",
+        "index.html", "styles.css", "core.js", "units.js", "explain.js", "app.js", "favicon.svg",
         "data/research.json", "data/health.json",
         "assets/upstate-data-systems-icon.svg", "assets/upstate-data-systems-logo.png")}
     try:
