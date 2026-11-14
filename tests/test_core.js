@@ -51,3 +51,62 @@ if(fs.existsSync(refPath)){
   }
 }
 console.log("AI Economics browser engine: all reference and macro tests passed");
+
+
+// v0.5: subscribing to two products must not duplicate the work itself.
+const access = JSON.parse(fs.readFileSync(path.join(__dirname,"..","research","access.json"),"utf8"));
+assert.equal(access.plans.length,15);
+const mixed=core.subscriptionPortfolio(catalog,access,byId("brainstorm"),{
+  mode:"subscription",repeats:10,
+  selections:[{plan_id:"openai-plus",weight:50},{plan_id:"google-pro",weight:50}]
+});
+near(mixed.monthly_payment,39.99);
+near(mixed.rows[0].tasks_month+mixed.rows[1].tasks_month,10);
+near(mixed.monthly_serving,10*core.task(catalog,"openai",byId("brainstorm"),{paid:false}).total);
+const openaiOnly=core.subscriptionPortfolio(catalog,access,byId("brainstorm"),{
+  mode:"subscription",repeats:10,selections:[{plan_id:"openai-plus",weight:100}]
+});
+near(openaiOnly.monthly_payment,20);
+near(openaiOnly.total_tasks_month,mixed.total_tasks_month);
+const apiBilling=core.subscriptionPortfolio(catalog,access,byId("quick"),{
+  mode:"api",api_provider:"google",repeats:100
+});
+near(apiBilling.monthly_payment,apiBilling.monthly_api_equivalent);
+assert.equal(apiBilling.rows.length,1);
+assert.throws(()=>core.subscriptionPortfolio(catalog,access,byId("quick"),{
+  mode:"subscription",selections:[]
+}));
+assert.throws(()=>core.subscriptionPortfolio(catalog,access,byId("quick"),{
+  mode:"subscription",selections:[{plan_id:"openai-go"},{plan_id:"openai-plus"}]
+}));
+
+// Tier changes affect revenue, not the total work, when the audience count is unchanged.
+const baseCfg={
+  provider_id:"openai",ownership:"cloud",cost_basis:"usage",reserve_fraction:.2,
+  tiers:[
+    {plan_id:"openai-free",users:1000,tasks_per_user:10,profile_id:"quick"},
+    {plan_id:"openai-plus",users:100,tasks_per_user:10,profile_id:"quick"},
+    {plan_id:"openai-pro100",users:0,tasks_per_user:10,profile_id:"quick"}
+  ],
+  api_customers:10,api_tasks_per_customer:10,api_profile_id:"coding",
+  api_realization:1,ad_usd_per_free_user_month:0,additional_annual_expense_usd:0
+};
+const m1=core.macroByTier(catalog,access,examples,baseCfg);
+const m2=core.macroByTier(catalog,access,examples,{
+  ...baseCfg,tiers:baseCfg.tiers.map(t=>({...t,
+    users:t.plan_id==="openai-plus"?0:t.plan_id==="openai-pro100"?100:t.users}))
+});
+near(m2.month.revenue-m1.month.revenue,100*(100-20));
+near(m1.month.serving_cost,m2.month.serving_cost,.001);
+near(m1.year.revenue,12*m1.month.revenue,.01);
+near(m1.year.serving_cost,365.25*m1.day.serving_cost,.01);
+assert.ok(m1.provisioned_gpu_systems>=Math.ceil(m1.estimated_gpu_systems));
+const provisioned=core.macroByTier(catalog,access,examples,{...baseCfg,cost_basis:"capacity"});
+assert.ok(provisioned.month.serving_cost>=m1.month.serving_cost);
+assert.ok(provisioned.month.infrastructure>0);
+const mZero=core.macroByTier(catalog,access,examples,{
+  ...baseCfg,tiers:baseCfg.tiers.map(t=>({...t,users:0})),api_customers:0
+});
+near(mZero.month.total_expense,0);
+assert.equal(mZero.provisioned_gpu_systems,0);
+console.log("Subscription allocations and tier-level macro scenarios: passed");
