@@ -1,9 +1,11 @@
-/* AI Economics v0.5 — single-pane guided estimator.
+/* AI Economics v0.6 — single-pane guided estimator.
  * All user-entered text is processed locally; diagnostics omit prompt contents.
  */
 "use strict";
 (function () {
   const core = window.AiEconomicsCore;
+  const explain = window.AiEconomicsExplain;
+  const units = window.AiEconomicsUnits;
   const $ = (id) => document.getElementById(id);
   const steps = ["task", "access", "usage", "economics", "scale", "evidence"];
   const meta = {
@@ -154,6 +156,7 @@
       set("side-subscription",money(portfolio.per_task_payment_allocation));
       set("side-calls",count(result.calls));
       set("side-tokens",count(result.tokens.input+result.tokens.billed_output));
+      explain.renderTokens(result.tokens,profile,pt);
       set("side-cost-label",cfg.extraToolCost==null
         ?"Inference + modeled operations / task"
         :"Inference, operations + entered tools / task");
@@ -190,6 +193,7 @@
       set("personal-api",money(portfolio.monthly_api_equivalent));
       set("personal-cost",money(portfolio.monthly_included_cost));
       set("personal-margin",money(portfolio.api_retail_less_payment));
+      explain.personal(portfolio,money,accessMode);
       set("rail-data-status","Research baseline "+data.reviewed_at);
       renderAccess();
       if(step==="scale")renderScale();
@@ -354,6 +358,7 @@
         control.addEventListener("change",renderScale);
       }
     }
+    if(explain)explain.decorate();
   }
 
   function macroDefaults(){
@@ -418,6 +423,7 @@
         set("macro-ops",money(p.operations));
         set("macro-extra",p.other_expense===0?"Not modeled":money(p.other_expense));
         set("macro-balance",money(p.estimated_balance));
+        explain.company(p,money,period);
         set("macro-tasks",count(macroResult.total_tasks_month));
         set("macro-calls",count(macroResult.model_calls_month));
         set("macro-nodes",macroResult.estimated_gpu_systems.toFixed(2));
@@ -513,11 +519,12 @@
     /* Numeric inputs, selected tier IDs, and caught JS errors only.
        Does NOT include pasted prompt/answer text or browser storage. */
     const report={
-      schema_version:2,generated_at:new Date().toISOString(),app_version:"0.5",
+      schema_version:2,generated_at:new Date().toISOString(),app_version:"0.6",
       current_step:step,selected_example:selected,billing_mode:accessMode,
       selections:data?currentAccessSelections():[],
       api_provider:$("api-provider").value,ownership:$("ownership").value,
       viewport:{width:window.innerWidth,height:window.innerHeight},
+      token_reference:$("token-unit").value,
       workload:{
         model_calls:number("model-calls"),tasks_per_month:number("repeats"),
         input_tokens:number("input"),output_tokens:number("output"),
@@ -547,7 +554,7 @@
   function copyEstimate(){
     if(!result||!portfolio)return;
     const lines=[
-      "AI Economics v0.5 — illustrative task: "+currentSample().name,
+      "AI Economics v0.6 — illustrative task: "+currentSample().name,
       "Access: "+(accessMode==="api"?"API":"Subscriptions"),
       "Selected: "+portfolio.rows.map(p=>p.label+" ("+(p.share*100).toFixed(1)+"%)").join(", "),
       "Model calls: "+result.calls,
@@ -594,6 +601,9 @@
     $("macro-provider").addEventListener("change",macroDefaults);
     $("copy").addEventListener("click",copyEstimate);
     $("download-diagnostics").addEventListener("click",downloadDiagnostics);
+    $("token-unit").addEventListener("change",()=>{
+      if(result)explain.renderTokens(result.tokens,taskProfile(),portfolio.total_tasks_month);
+    });
     for(const id of ["ownership","model-calls","repeats","input","output",
       "cache","reasoning","extra-tool-cost","gpu_effective_tokens_s","utilization",
       "fleet_nodes","operations_fte","fully_loaded_salary_usd",
@@ -612,7 +622,7 @@
   }
   async function start(){
     try{
-      if(!core)throw Error("Calculator engine not loaded.");
+      if(!core||!explain||!units)throw Error("Calculator interface modules not loaded.");
       const response=await fetch("./data/research.json",{cache:"no-store"});
       if(!response.ok)throw Error("Research snapshot missing. Run the Python build command.");
       data=await response.json();
@@ -626,6 +636,7 @@
       bindEvents();
       initMacro();
       initAccess();
+      explain.initHelp();
       renderSources();
       set("reviewed",data.reviewed_at);
       for(let i=0;i<steps.length;i++)$("progress-dots").append(element("i",""));
