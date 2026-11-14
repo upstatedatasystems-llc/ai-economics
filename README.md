@@ -4,7 +4,33 @@ Research-based public calculator comparing AI **consumer subscription payments**
 
 Published by Upstate Data Systems LLC. Designed to run source monitoring and static research exports on **purgatory01** (lightweight Oracle Cloud AMD64 VM), then display a self-contained calculator on upstatedatasystems.com/ai-economics.
 
-**Status: v0.5 guided local test prototype. Changes are in GitHub, not deployed to purgatory01 or Vercel.** No AI models are run, and no paid AI APIs or GPUs are required.
+**Status: v0.6 guided local test prototype. Changes are in GitHub, not deployed to purgatory01 or Vercel.** No AI models are run, and no paid AI APIs or GPUs are required.
+
+## What's new in v0.6 — token scale, help and charts
+
+- **Charcoal app shell.** The header, left navigation, center workspace, and right live-summary panel now use subdued dark-gray surfaces; green is used sparingly for branding and selected states.
+- **Token quantities you can picture.** A selector in the live summary converts token values to approximate English words, printed pages (250 words), 1,000-word articles, novels (80,000 words), copies of Homer's Odyssey (~120,000 words), or copies of War and Peace (~566,513 English words for one translation). The selected unit appears alongside per-call input/output, task input/cached/output/hidden counts, the right summary, and monthly task text volume. The rough conversion of 1 token ≈ 0.75 English words is not a model-specific tokenizer. English word count of The Odyssey varies by translation; the 120k reference describes the original Greek.
+- **Metric information icons.** Adjustable fields and major result metrics now have expandable explanations next to their labels instead of dense always-visible descriptions. Popovers work by click or keyboard and close with Escape.
+- **Personal scale graph.** Three horizontal bars compare your fixed monthly subscriptions or API bill, the same work at published API retail rates, and modeled inference/operations expense including any entered outside tools.
+- **Company-scale graph.** Two bars on a shared linear dollar scale compare hypothetical revenue (subscription, assumed ads, realized API billing) with included expense (infrastructure, supporting operations, optional additional expense). Both are stacked into their own category breakdown, with a legend and a coverage explanation. These are never totaled together.
+- **Small-server compatibility.** New presentation modules are plain JavaScript with no dependencies. The Python export and test suite include them; only the selected step scrolls within the viewport.
+
+Comparative bars are linear, not logarithmic. Tiny nonzero bars can be given a minimum visible 2-pixel width; use the displayed dollar labels for exact quantities. All monetary and company-population scenarios remain illustrative, not measured provider expenses.
+
+Reference sources: OpenAI token estimate https://help.openai.com/en/articles/4936856-understanding-and-counting-tokens ; Penguin on The Odyssey https://www.penguin.co.uk/discover/articles/the-odyssey-homer-guide-summary-characters-best-version-translation ; word count for one English War and Peace translation https://vocabularybuilding.org/words-in/war-and-peace/ .
+
+### Retest the existing purgatory01 preview
+
+    cd ~/ai-economics
+    git pull --ff-only
+    PYTHONPATH=src python3 -m unittest discover -s tests -v
+    PYTHONPATH=src python3 -m ai_economics serve --port 8765
+
+Reconnect your existing private Windows SSH tunnel and open http://127.0.0.1:8765. Stop the preview using Ctrl+C. Server diagnostics:
+
+    PYTHONPATH=src python3 -m ai_economics diagnostics --output ~/ai-economics-v06-diagnostics.tar.gz
+
+The top-bar Diagnostics action downloads browser-side numeric inputs and JavaScript errors without including pasted prompt/answer text. Production website and Vercel are unchanged.
 
 ## v0.5 — subscription and API access; full-scale cost scenarios
 
