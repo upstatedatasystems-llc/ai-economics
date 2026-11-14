@@ -4,7 +4,15 @@ Research-based public calculator comparing AI **consumer subscription payments**
 
 Published by Upstate Data Systems LLC. Designed to run source monitoring and static research exports on **purgatory01** (lightweight Oracle Cloud AMD64 VM), then display a self-contained calculator on upstatedatasystems.com/ai-economics.
 
-**Status: v0.6 guided local test prototype. Changes are in GitHub, not deployed to purgatory01 or Vercel.** No AI models are run, and no paid AI APIs or GPUs are required.
+**Status: v0.6 initial public release at https://upstatedatasystems.com/ai-economics.** The company website hosts a reviewed static snapshot pinned to source commit `3a1a64e569522d2116dec1aa93430ce8d154c37a` from this repository. Deployment uses the private Vite/Vercel website repo; purgatory01 is not exposed or automatically connected to the public website. No AI models run on visitors' behalf, and no paid AI APIs or GPUs are required.
+
+## Public website release and data freshness
+
+The company website now bundles the independent static calculator under `public/ai-economics/`, with a homepage product card, navigation, source disclosures and a sitemap URL. Deployment of website commit `9f3d57befaea489c154b6cf57d97a8dfd6108218` passed website CI and received a successful Vercel deployment status on November 14, 2026.
+
+The live `data/research.json` is an intentionally **pinned, reviewed research snapshot** (source commit `3a1a64e569522d2116dec1aa93430ce8d154c37a`). The public `data/health.json` is a static metadata report, not a live research-monitor feed. Prices, model names, throughput and population assumptions require further verification and periodic review; users should not mistake hypothetical macro numbers for real provider income statements.
+
+Future app changes in this public source repository must be explicitly synchronized into `upstatedatasystems-llc/upstate-data-systems-website` and redeployed. An automated, review-gated sync is a separate backlog item. The AI Economics source monitor and daily systemd service do not currently publish to Vercel.
 
 ## What's new in v0.6 — token scale, help and charts
 
@@ -30,7 +38,7 @@ Reconnect your existing private Windows SSH tunnel and open http://127.0.0.1:876
 
     PYTHONPATH=src python3 -m ai_economics diagnostics --output ~/ai-economics-v06-diagnostics.tar.gz
 
-The top-bar Diagnostics action downloads browser-side numeric inputs and JavaScript errors without including pasted prompt/answer text. Production website and Vercel are unchanged.
+The top-bar Diagnostics action downloads browser-side numeric inputs and JavaScript errors without including pasted prompt/answer text. The initial static website release was approved and deployed November 14, 2026; changes made in this source repo do not automatically update the live site.
 
 ## v0.5 — subscription and API access; full-scale cost scenarios
 
@@ -208,7 +216,7 @@ The existing Upstate Data Systems website is a Vite project. From this project:
 
 Copy the resulting ai-economics folder to the website repository's public/ai-economics folder. Its Vite build will copy the content into the final site at /ai-economics/. The front end fetches versioned static JSON and calculates locally; it never queries purgatory01.
 
-**Do not copy or deploy to Vercel until the local test has been approved.** Future automated publishing will require a narrowly scoped credential on the server or a review-based GitHub Actions workflow, never a public-site API secret.
+**Initial production deployment approved November 14, 2026.** Subsequent source code or numerical price changes still require reviewed sync into the website repo. Automated publishing is not yet configured; if introduced, use narrow, reviewed credentials rather than a public-site API secret.
 
 ## Research methodology
 
@@ -248,4 +256,4 @@ No analytics, trackers or user prompt uploads are present. The calculator runs i
 2. Implement EIA/BLS/SEC structured ingestion with robust schema checks and provenance.
 3. Ingest and normalize model-specific throughput results for specific hardware; the present eight-H100 proxy is unbenchmarked. 
 4. Calibrate compute and personnel scenarios and add historical trend charts.
-5. Add review-gated static publication to the existing website repo, then ship to Vercel separately.
+5. Automate review-gated updates to the existing static website snapshot; the initial Vercel deployment is complete, but automatic refresh/publishing is not yet configured.
