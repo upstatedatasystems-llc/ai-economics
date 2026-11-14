@@ -183,3 +183,81 @@ def estimate_workload(catalog: dict, provider_id: str, workload: dict, *,
         },
         "caveat": "Model-only serving subtotal; subscription share is accounting allocation, not price per request. No proprietary provider costs observed."
     }
+
+
+def estimate_macro(catalog: dict, provider_id: str, workload_profiles: list[dict],
+                   parameters: dict, *, ownership: str = "cloud",
+                   overrides: dict | None = None) -> dict:
+    """Annualized illustrative company-scale inference economics, NEVER actual provider filings.
+
+    Paid/free/API segments are mutually exclusive modeled demand. Reported financial
+    disclosures must be presented independently and not combined with these results.
+    """
+    provider = next((p for p in catalog["providers"] if p["id"] == provider_id), None)
+    if not provider:
+        raise ValueError("unknown provider")
+    profiles = {p["id"]: p for p in workload_profiles}
+    if len(profiles) != len(workload_profiles):
+        raise ValueError("duplicate workload id")
+    counts = ("paid_users", "free_users", "paid_tasks_per_user",
+              "free_tasks_per_user", "api_tasks_per_month")
+    for name in counts:
+        if name not in parameters or isinstance(parameters[name], bool):
+            raise ValueError("missing or invalid macro count: " + name)
+        if not isinstance(parameters[name], (int, float)):
+            raise ValueError("invalid macro count: " + name)
+        if not 0 <= parameters[name] <= 1_000_000_000:
+            raise ValueError("macro count out of range: " + name)
+    paid_count = parameters["paid_users"] * parameters["paid_tasks_per_user"]
+    free_count = parameters["free_users"] * parameters["free_tasks_per_user"]
+    api_count = parameters["api_tasks_per_month"]
+    def unit(profile_key):
+        key = parameters[profile_key]
+        if key not in profiles:
+            raise ValueError("unknown macro profile: " + key)
+        return estimate_workload(
+            catalog, provider_id, profiles[key], tasks_per_month=1,
+            subscription=False, ownership=ownership, overrides=overrides)
+    paid_unit, free_unit, api_unit = (
+        unit("paid_profile"), unit("free_profile"), unit("api_profile"))
+    ad_per_user = _safe_number(parameters.get("ad_usd_per_free_user_month", 0), "ad_per_user")
+    realization = _safe_number(parameters.get("api_realization", 1), "api_realization")
+    if realization > 1:
+        raise ValueError("API realization > 1")
+    other_annual = _safe_number(parameters.get("additional_annual_expense_usd", 0),
+                                "additional_annual_expense_usd")
+    subscriptions = parameters["paid_users"] * provider["subscription_usd_month"]
+    advertising = parameters["free_users"] * ad_per_user
+    api_revenue = api_count * api_unit["per_task"]["api_retail_equivalent_usd"] * realization
+    paid_cost = paid_count * paid_unit["per_task"]["modeled_inference_subtotal_usd"]
+    free_cost = free_count * free_unit["per_task"]["modeled_inference_subtotal_usd"]
+    api_cost = api_count * api_unit["per_task"]["modeled_inference_subtotal_usd"]
+    serving = paid_cost + free_cost + api_cost
+    gross = subscriptions + advertising + api_revenue
+    other_month = other_annual / 12
+    def period(scale):
+        return {key: round(value * scale, 2) for key, value in {
+            "subscription_revenue_usd": subscriptions,
+            "advertising_revenue_assumed_usd": advertising,
+            "api_revenue_usd": api_revenue,
+            "gross_revenue_usd": gross,
+            "consumer_serving_usd": paid_cost + free_cost,
+            "api_serving_usd": api_cost,
+            "modeled_serving_usd": serving,
+            "additional_expense_assumed_usd": other_month,
+            "modeled_total_expense_usd": serving + other_month,
+            "revenue_less_modeled_expense_usd": gross - serving - other_month
+        }.items()}
+    return {
+        "task_counts_monthly": {
+            "paid": paid_count, "free": free_count, "api": api_count},
+        "model_calls_monthly": (
+            paid_count * paid_unit["volume"]["model_calls"]
+            + free_count * free_unit["volume"]["model_calls"]
+            + api_count * api_unit["volume"]["model_calls"]),
+        "day": period(12 / 365.25),
+        "month": period(1),
+        "year": period(12),
+        "is_actual_provider_data": False,
+        "description": "Illustrative serving costs and population scenarios, not a company P&L."
+    }
