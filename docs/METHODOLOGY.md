@@ -98,3 +98,44 @@ The generated static site executes interactive calculations in the visitor's bro
 4. Add data extraction workflows to propose reviewed numerical updates and preserve historical pricing snapshots.
 5. Compare with any reported company-scale cost and revenue *only after* aligning scopes and periods; do not treat CAPEX commitments as actual cash operating expense.
 6. Run browser-level accessibility/responsiveness testing and benchmark parity checks on purgatory01 before publishing to Vercel.
+
+
+## v0.5 — Multiple subscriptions, API access and tier-level operating scenarios
+
+### User access economics
+
+Subscriptions are FIXED monthly payments. Public API retail prices are a DIFFERENT access method; most consumer subscription fees do not cover API usage.
+
+An individual may select multiple consumer plans, such as ChatGPT Plus ($20) and Google AI Pro ($19.99). Each chosen plan contributes one list-price monthly payment. The user assigns task-share weights. Their sum is normalized to 100%, and each plan's monthly task allocation is the total number of tasks multiplied by that normalized share. We never assign the entire same workload to every selected subscription.
+
+For each share, the calculator evaluates its selected provider's public API-retail comparator and the common modeled serving proxy. Total subscriber spending is the SUM of fixed plan payments, while total API-retail equivalent and serving expense are the SUM of allocated workload charges. With two $20-ish plans, the total monthly payment includes both fees even if all task weight is assigned to one plan.
+
+The difference between API retail equivalent and subscription payments answers ONLY: how much would the modeled text-token workload cost if instead purchased at published API rates? It is not a guarantee of allowed usage, model parity, value from bundled products, cost of providing the subscription, subsidy or provider profit/loss. The API retail break-even task count is approximately the fixed monthly payments divided by API retail per task, rounded up, for the currently selected mix. If API-retail cost per task is zero, this break-even is undefined. It does not describe plan limits.
+
+API access mode has no fixed subscriber payment; the modeled charge is the selected provider's public token API price times the work, before added outside-tool services, taxes, discounts or special credits. Higher Claude plans advertise limited API credits; the application does not assume a particular consumer can redeem credits against their API use.
+
+The version-controlled plan catalog in research/access.json records US monthly list prices and official source URLs. It excludes trials, discounts, taxes, annualized bill savings, family sharing, changing usage caps, consumer model routing and the value of non-text bundled services.
+
+### Tier-based provider-scale scenario
+
+The company view has one separate row per published consumer plan, including Free, and a separately modeled API customer segment.
+
+For plan j, assume U_j active accounts and T_j complete tasks per account per month. Plan gross revenue is U_j times published plan price. Its serving demand is U_j times T_j times per-task modeled tokens/costs for the chosen representative task. Free-user advertising is optional, with zero as an unmodeled starting assumption rather than a claim of actual zero advertising revenue.
+
+For the API segment, assume U_API customers and T_API complete tasks/customer/month. Retail API billing is customer task count multiplied by the selected API comparator's public per-task price and an explicitly hypothetical retail-realization fraction.
+
+The overall monthly revenue is the sum of plan payments, modeled free-user advertising and realized API billings. Total included expenses are modeled inference infrastructure, modeled fleet-level staffing/administration and optional additional company expense. The period control converts this normalized month to day (12/365.25) or year (12). It does not reconstruct actual cash-flow history.
+
+Two alternative expense bases MUST NOT be added:
+- Usage-allocated: each workload's output-equivalent inference tokens get a fractional share of annual GPU rental/owned accounting cost and operations at utilization-adjusted capacity.
+- Provisioned fleet: divide total monthly equivalent tokens by one system's modeled monthly utilized capacity, apply a user-controlled spare-capacity fraction, and round up to full eight-GPU systems. Multiply by full per-node modeled infrastructure and support cost per month.
+
+The provisioning model is still a simplified capacity budget: it does not price committed cloud discounts, latency/throughput tradeoffs, multi-region redundancy, burst demand, network and disk storage, specialized hardware, training R&D, or real operational staffing. Owned-hardware depreciation is not the same as actual hardware purchase cash flow. The app explicitly labels included revenues and costs as assumed, not actual company totals.
+
+The tier_demo starting distributions for OpenAI, Anthropic and Google in research/macro.json are fictional demonstrations. They are NOT reported provider subscriber mixes, average consumption, workload samples or company forecasts. Financial disclosures in the Evidence tab retain original reported scope and periods and are never automatically blended with these assumptions.
+
+### Implementation and source status
+
+The original Python reference model covers single-provider scenarios, while the client-side JavaScript engine now implements subscription portfolios and tier-aware macro economics. Its new arithmetic invariants and desktop/mobile interactions are tested in CI. Python continues to validate the source registry, assemble reviewed static JSON and record source observations.
+
+The purgatory01 November 14, 2026 diagnostics show 19/19 Python tests passing, 4 source baselines, 6 manual sources and 2 Google sources with no stable price-bearing evidence. Both Google pricing pages were moved to manual monitoring, rather than repeatedly generating unverifiable alerts. Automated collection is still only a conservative source-change monitor; it cannot independently validate numeric pricing changes.
