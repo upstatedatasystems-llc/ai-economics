@@ -4,7 +4,39 @@ Research-based public calculator comparing AI **consumer subscription payments**
 
 Published by Upstate Data Systems LLC. Designed to run source monitoring and static research exports on **purgatory01** (lightweight Oracle Cloud AMD64 VM), then display a self-contained calculator on upstatedatasystems.com/ai-economics.
 
-**Status: v0.4 guided local test prototype. Not deployed to purgatory01 or Vercel.** No AI models are run, and no paid AI APIs or GPUs are required.
+**Status: v0.5 guided local test prototype. Changes are in GitHub, not deployed to purgatory01 or Vercel.** No AI models are run, and no paid AI APIs or GPUs are required.
+
+## v0.5 — subscription and API access; full-scale cost scenarios
+
+**Six guided steps:** choose a task; choose billing access (one or more consumer plans versus API); size all model calls and tokens; estimate task cost; compare monthly/company-wide economics; inspect sources and collection status.
+
+**Branding and design:** the actual Upstate Data Systems website wordmark, icon and favicon are now bundled in this public repository. The banner and side panels remain green, while the central work area uses charcoal and slate gray.
+
+The subscription example starts with ChatGPT Plus and Google AI Pro selected at $20 and $19.99/month. The illustrated monthly workload is divided 50/50, **not billed twice**. Change each plan and its work-share weight. Alternatively, select API mode and choose a provider: its public API retail rate is treated as usage-based billed expense instead of a subscription.
+
+The dashboard answers two **different** comparisons: (1) the subscription price versus what that work would cost at *published API retail rates* (an alternative purchase-price benchmark, not a guaranteed plan allowance or real subsidy), and (2) the modeled inference/operations cost of serving the tasks (not reported provider expense). Some plans bundle other products or limited API credits; these are not automatically valued or deducted.
+
+The company-scale editor now offers editable **users, task frequencies and task shapes at every consumer tier**, with separate API customer count, task rate, public-price realization, advertising, and additional annual expenses. Initial distributions are explicitly **fictional demonstrations**, not estimates of any real company's audience. It reports subscription/API revenue versus GPU infrastructure, supporting operations, and optional other expenses for day/month/year.
+
+Two selectable cost bases are alternatives, not additive: **usage-allocated** per-token capacity share, and **provisioned fleet** of whole eight-GPU-equivalent systems plus a configurable spare-capacity fraction. The latter is closer to a theoretical reserved-capacity budget, not an actual vendor invoice. Owned-system depreciation is an accounting allocation. Unknown corporate functions, training, R&D, model differences, peak demand and tool charges remain outside the default estimate.
+
+**v0.4 diagnostics correction:** Google plan/API monitoring returned zero verifiable price-bearing page text. Both are now marked for manual review instead of repeated scheduled extraction.
+
+### Retest on purgatory01
+
+    cd ~/ai-economics
+    git pull --ff-only
+    PYTHONPATH=src python3 -m unittest discover -s tests -v
+    PYTHONPATH=src python3 -m ai_economics refresh --force
+    PYTHONPATH=src python3 -m ai_economics serve --port 8765
+
+Use the same Windows SSH tunnel and open http://127.0.0.1:8765. The app binds only to loopback. Stop the preview with Ctrl+C.
+
+For server diagnostics run:
+
+    PYTHONPATH=src python3 -m ai_economics diagnostics --output ~/ai-economics-v05-diagnostics.tar.gz
+
+The top-bar Diagnostics action downloads browser diagnostics without pasted prompt or answer contents. Review both artifacts before sharing.
 
 ## What's new in v0.4 — guided single-pane application
 
