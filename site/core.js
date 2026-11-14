@@ -155,12 +155,151 @@
       note:"Illustrative population and workload mix, NOT actual provider-scale financials. Not a company P&L."
     };
   }
+
+  function subscriptionPortfolio(catalog, planCatalog, profile, cfg) {
+    /* The same monthly workload is DISTRIBUTED across chosen subscriptions,
+       not charged in full to each. API is an alternative access path. */
+    cfg=cfg||{};
+    var totalTasks=Math.max(1,Math.min(10000,Math.round(num(cfg.repeats,profile.tasks_per_month||1))));
+    var plans=planCatalog.plans||[];
+    var mode=cfg.mode==="api"?"api":"subscription";
+    var rows=[];
+    if(mode==="api"){
+      var pid=cfg.api_provider||"openai";
+      var unit=task(catalog,pid,profile,{ownership:cfg.ownership,assumptions:cfg.assumptions,repeats:1,paid:false});
+      rows.push({plan_id:null,provider_id:pid,label:unit.provider.name+" API",share:1,
+        tasks_month:totalTasks,payment_month:unit.api*totalTasks,
+        api_equivalent_month:unit.api*totalTasks,
+        infra_month:unit.infra*totalTasks,ops_month:unit.ops*totalTasks,
+        serving_month:unit.total*totalTasks});
+    }else{
+      var inputs=(cfg.selections||[]).filter(function(row){
+        return plans.some(function(p){return p.id===row.plan_id;});
+      });
+      if(!inputs.length)throw new Error("Select at least one subscription plan");
+      var seen={};
+      inputs.forEach(function(sel){
+        var plan=plans.find(function(p){return p.id===sel.plan_id;});
+        if(seen[plan.provider_id])throw new Error("Choose at most one plan per provider");
+        seen[plan.provider_id]=true;
+      });
+      var weightSum=inputs.reduce(function(n,row){return n+nonneg(row.weight);},0);
+      inputs.forEach(function(sel){
+        var plan=plans.find(function(p){return p.id===sel.plan_id;});
+        var fraction=weightSum>0?nonneg(sel.weight)/weightSum:1/inputs.length;
+        var unit=task(catalog,plan.provider_id,profile,{ownership:cfg.ownership,assumptions:cfg.assumptions,repeats:1,paid:false});
+        rows.push({plan_id:plan.id,provider_id:plan.provider_id,label:plan.name,
+          share:fraction,tasks_month:totalTasks*fraction,payment_month:plan.monthly_usd,
+          api_equivalent_month:unit.api*totalTasks*fraction,
+          infra_month:unit.infra*totalTasks*fraction,ops_month:unit.ops*totalTasks*fraction,
+          serving_month:unit.total*totalTasks*fraction});
+      });
+    }
+    function sum(key){return rows.reduce(function(t,row){return t+row[key];},0);}
+    var tool=cfg.extraToolCost==null?null:nonneg(cfg.extraToolCost);
+    var payment=sum("payment_month"),retail=sum("api_equivalent_month"),
+        serving=sum("serving_month"),infra=sum("infra_month"),ops=sum("ops_month");
+    return {mode:mode,rows:rows,total_tasks_month:totalTasks,
+      monthly_payment:payment,monthly_api_equivalent:retail,monthly_serving:serving,
+      monthly_infrastructure:infra,monthly_operations:ops,
+      monthly_extra_tool_cost:tool==null?null:tool*totalTasks,
+      monthly_included_cost:tool==null?serving:serving+tool*totalTasks,
+      per_task_payment_allocation:payment/totalTasks,
+      per_task_api_equivalent:retail/totalTasks,
+      per_task_serving:serving/totalTasks,
+      per_task_included_cost:serving/totalTasks+(tool||0),
+      api_retail_less_payment:retail-payment,
+      api_retail_to_payment:payment>0?retail/payment:null,
+      payment_less_included_expense:payment-serving-(tool||0)*totalTasks,
+      external_tools_unpriced:tool===null&&nonneg(profile.tool_executions)>0,
+      caution:"API-equivalent retail is a counterfactual price, not a guarantee of value or actual provider cost. Subscription workloads may exceed plan usage limits."
+    };
+  }
+
+  function macroByTier(catalog, planCatalog, profileCatalog, cfg) {
+    /* All rows are hypothetical, mutually exclusive *accounts* in this
+       simulation. There is no observed provider audience/expense telemetry. */
+    cfg=cfg||{};
+    var provider=catalog.providers.find(function(p){return p.id===cfg.provider_id;});
+    if(!provider)throw new Error("Unknown macro provider");
+    var plans=planCatalog.plans.filter(function(p){return p.provider_id===provider.id;});
+    var profiles=profileCatalog.filter(function(p){return p.id!=="custom";});
+    function chosen(id) {
+      var p=profiles.find(function(w){return w.id===id;});
+      if(!p)throw new Error("Unknown profile "+id);
+      return p;
+    }
+    var seen={},rows=[],totalTasks=0,modelCalls=0,weighted=0;
+    var subRevenue=0,adRevenue=0,apiRevenue=0;
+    var allocatedInfra=0,allocatedOps=0;
+    var common={ownership:cfg.ownership||"cloud",assumptions:cfg.assumptions,paid:false,repeats:1};
+    (cfg.tiers||[]).forEach(function(t){
+      var plan=plans.find(function(p){return p.id===t.plan_id;});
+      if(!plan||seen[t.plan_id])throw new Error("Invalid or duplicate tier");
+      seen[t.plan_id]=true;
+      var users=Math.floor(Math.min(1e9,nonneg(t.users)));
+      var tasksUser=Math.min(10000,nonneg(t.tasks_per_user));
+      var unit=task(catalog,provider.id,chosen(t.profile_id),common);
+      var tasks=users*tasksUser,revenue=users*plan.monthly_usd;
+      var ads=plan.monthly_usd===0?users*nonneg(cfg.ad_usd_per_free_user_month):0;
+      var infra=tasks*unit.infra,ops=tasks*unit.ops;
+      totalTasks+=tasks;modelCalls+=tasks*unit.calls;weighted+=tasks*unit.output_equiv;
+      subRevenue+=revenue;adRevenue+=ads;allocatedInfra+=infra;allocatedOps+=ops;
+      rows.push({plan_id:plan.id,name:plan.name,users:users,tasks_month:tasks,
+        revenue:revenue+ads,subscription_revenue:revenue,ads_revenue:ads,
+        infrastructure:infra,operations:ops,serving:infra+ops});
+    });
+    var apiCustomers=Math.floor(Math.min(1e9,nonneg(cfg.api_customers)));
+    var apiTasksUser=Math.min(10000,nonneg(cfg.api_tasks_per_customer));
+    var apiTasks=apiCustomers*apiTasksUser;
+    var apiUnit=task(catalog,provider.id,chosen(cfg.api_profile_id||"coding"),common);
+    var realized=Math.min(1,nonneg(cfg.api_realization==null?1:cfg.api_realization));
+    apiRevenue=apiTasks*apiUnit.api*realized;
+    allocatedInfra+=apiTasks*apiUnit.infra;
+    allocatedOps+=apiTasks*apiUnit.ops;
+    weighted+=apiTasks*apiUnit.output_equiv;
+    modelCalls+=apiTasks*apiUnit.calls;
+    totalTasks+=apiTasks;
+    rows.push({plan_id:"api",name:provider.name+" API",users:apiCustomers,tasks_month:apiTasks,
+      revenue:apiRevenue,subscription_revenue:0,ads_revenue:0,
+      infrastructure:apiTasks*apiUnit.infra,operations:apiTasks*apiUnit.ops,
+      serving:apiTasks*apiUnit.total});
+    var units=unitCosts(catalog,cfg.ownership||"cloud",defaults(catalog,cfg.assumptions));
+    var nodes=weighted/(units.annual_capacity_equiv/12);
+    var reserve=Math.min(1,nonneg(cfg.reserve_fraction==null?0.20:cfg.reserve_fraction));
+    var provisioned=totalTasks>0?Math.max(1,Math.ceil(nodes*(1+reserve))):0;
+    var basis=cfg.cost_basis==="capacity"?"capacity":"usage";
+    var infrastructure=basis==="capacity"?provisioned*units.annual_node/12:allocatedInfra;
+    var operations=basis==="capacity"?provisioned*units.annual_operations_per_node/12:allocatedOps;
+    var other=nonneg(cfg.additional_annual_expense_usd)/12;
+    var revenue=subRevenue+adRevenue+apiRevenue;
+    var serving=infrastructure+operations;
+    function period(factor) {
+      return {subscription_revenue:subRevenue*factor,ads_revenue:adRevenue*factor,
+        api_revenue:apiRevenue*factor,revenue:revenue*factor,
+        infrastructure:infrastructure*factor,operations:operations*factor,
+        serving_cost:serving*factor,other_expense:other*factor,
+        total_expense:(serving+other)*factor,
+        estimated_balance:(revenue-serving-other)*factor};
+    }
+    return {provider_id:provider.id,cost_basis:basis,
+      tier_rows:rows,total_tasks_month:totalTasks,model_calls_month:modelCalls,
+      estimated_gpu_systems:nodes,provisioned_gpu_systems:provisioned,
+      capacity_reserve_fraction:reserve,
+      usage_allocated_serving_month:allocatedInfra+allocatedOps,
+      provisioned_fleet_month:provisioned*(units.annual_node+units.annual_operations_per_node)/12,
+      day:period(12/365.25),month:period(1),year:period(12),
+      revenue_to_expense_ratio:serving+other>0?revenue/(serving+other):null,
+      is_actual_financials:false,
+      caveat:"Hypothetical population, usage and fleet model, not observed provider financials. Provisioned capacity mode charges full modeled system-months; do not add it to usage-allocated cost."};
+  }
+
   function textTokenEstimate(text) {
     /* Informal approximation for common English text, NOT a model tokenizer. */
     if (!text || !String(text).trim()) return 0;
     return Math.max(1,Math.ceil(Array.from(String(text)).length/4));
   }
-  var api={task:task,macro:macro,profileTotals:profileTotals,sensitivity:sensitivity,
+  var api={task:task,macro:macro,subscriptionPortfolio:subscriptionPortfolio,macroByTier:macroByTier,profileTotals:profileTotals,sensitivity:sensitivity,
     defaults:defaults,unitCosts:unitCosts,textTokenEstimate:textTokenEstimate};
   if (typeof module!=="undefined" && module.exports) {module.exports=api;}
   root.AiEconomicsCore=api;
