@@ -1,10 +1,22 @@
 # AI Economics
 
-Research-based public calculator comparing AI **consumer subscription payments**, **equivalent API retail charges**, **modeled inference infrastructure**, and **allocated operations / administration**.
+Research-based public calculator comparing AI **consumer subscription payments**, **equivalent API retail charges**, **modeled inference infrastructure**, and **allocated operations / administration**, at both a **completed-task** scale and an **illustrative company-scale** daily/monthly/yearly scale.
 
 Published by Upstate Data Systems LLC. Designed to run source monitoring and static research exports on **purgatory01** (lightweight Oracle Cloud AMD64 VM), then display a self-contained calculator on upstatedatasystems.com/ai-economics.
 
-**Status: initial testable prototype. Not deployed to purgatory01 or Vercel.** No AI models are run, and no paid AI APIs or GPUs are required.
+**Status: v0.3 local test prototype. Not deployed to purgatory01 or Vercel.** No AI models are run, and no paid AI APIs or GPUs are required.
+
+## What's new in v0.3
+
+- Clickable, side-by-side **everyday question**, **multi-turn brainstorming session** and **agentic coding + staging deployment** examples. Each shows model-call counts, estimated input/cached/output tokens, output-billing allowance, published API equivalent, and modeled serving cost.
+- A **My own question** mode accepts pasted prompts and optional answers in the visitor's browser (not uploaded) and estimates their visible token counts. The heuristic is approximate and cannot know hidden provider context or reasoning.
+- Optional per-task external-tool cost input: tool executions are displayed but **never silently assigned $0** when unpriced.
+- A separate **company-scale scenario** for hypothetical paying customers, free users, API workloads, advertising and additional expenses. It displays normalized daily, monthly, and yearly expense/revenue and the implied eight-GPU capacity.
+- **Reported financial context**, clearly separated from scenario mathematics: Anthropic's filing, an OpenAI reported run rate, and an Alphabet Google Cloud disclosure. Their periods and scopes are not interchangeable.
+- Standalone audited methodology: [docs/METHODOLOGY.md](docs/METHODOLOGY.md). Source and population defaults: [research/workloads.json](research/workloads.json), [research/macro.json](research/macro.json).
+
+**Important:** the sample audience sizes, task token counts, throughput assumptions and staffing ratios are illustrative—not measured provider usage or actual company cost/revenue. The macro screen cannot establish what these companies *really* spend without additional evidence. 
+
 
 ## Quick local preview
 
@@ -105,10 +117,10 @@ See research/catalog.json for directly linked official pricing pages, AWS, EIA, 
 ## Layout
 
 - research/catalog.json — reviewed facts, source registry, assumed cost parameters
-- src/ai_economics/model.py — dependency-free reference cost model
+- src/ai_economics/model.py — dependency-free task and macro reference cost models
 - src/ai_economics/app.py — source hashing, SQLite monitoring, static export and local preview
-- site/ — standalone calculator UI and research/source explorer
-- tests/ — offline unit and generation checks
+- site/ — standalone task/workload calculator, hypothetical macro explorer and financial disclosures
+- tests/ — offline Python and JavaScript parity/unit/generation checks
 - systemd/ — optional unprivileged scheduled job on OCI
 - scripts/ — server preparation and local preview convenience script
 - .github/workflows/ci.yml — automated offline checks
@@ -123,6 +135,6 @@ No analytics, trackers or user prompt uploads are present. The calculator runs i
 
 1. Validate local browser preview on purgatory01 and tune phone/desktop layout.
 2. Implement EIA/BLS/SEC structured ingestion with robust schema checks and provenance.
-3. Ingest and normalize real MLPerf throughput results for specific models/hardware.
+3. Ingest and normalize model-specific throughput results for specific hardware; the present eight-H100 proxy is unbenchmarked. 
 4. Calibrate compute and personnel scenarios and add historical trend charts.
 5. Add review-gated static publication to the existing website repo, then ship to Vercel separately.
