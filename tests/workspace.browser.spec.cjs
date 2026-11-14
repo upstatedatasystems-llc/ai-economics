@@ -103,7 +103,7 @@ test('custom prompt stays local and is excluded from diagnostics',async({page})=
   expect(serialized).not.toContain('NEVER_EXPORT_PRIVATE_QUESTION');
   expect(serialized).not.toContain('NEVER_EXPORT_PRIVATE_ANSWER');
   const data=JSON.parse(serialized);
-  expect(data.app_version).toBe('0.5');
+  expect(data.app_version).toBe('0.6');
   expect(data.errors).toEqual([]);
 });
 
