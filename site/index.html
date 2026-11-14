@@ -9,6 +9,7 @@
   <title>AI Economics · Upstate Data Systems</title>
   <link rel="stylesheet" href="./styles.css">
   <script src="./core.js" defer></script>
+  <script src="./units.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -18,7 +19,7 @@
       <a class="identity" href="https://upstatedatasystems.com/" aria-label="Upstate Data Systems home">
         <img class="brand-icon-official" src="./assets/upstate-data-systems-icon.svg" alt="" width="38" height="38"><span class="brand-text"><strong>UPSTATE</strong><small>DATA SYSTEMS</small></span>
       </a>
-      <span class="project-name"><span class="project-separator">/</span> AI Economics <span class="app-version">Research preview · v0.5</span></span>
+      <span class="project-name"><span class="project-separator">/</span> AI Economics <span class="app-version">Research preview · v0.6</span></span>
       <div class="top-actions">
         <span class="live-indicator"><span></span> Offline-first simulator</span>
         <button id="download-diagnostics" class="icon-button" type="button" title="Download privacy-safe browser diagnostics">Diagnostics</button>
@@ -91,22 +92,27 @@
               <p class="note muted">API-retail equivalent is a price comparison—not a guarantee your subscription includes this usage. Real limits, bundled features, non-text tools and model routing differ across tiers.</p>
             </section>
             <section class="screen" data-screen="usage" aria-label="Size the work" hidden>
-              <div class="explain-line">A single visible question may involve many model calls. Count the full task, including repeated context and tool results.</div>
+              <div class="explain-line"><strong>What is a token?</strong> A token is a piece of text a model reads or produces—it might be part of a word, a full word, punctuation, or whitespace. Roughly 100 English tokens ≈ 75 words. <a href="https://help.openai.com/en/articles/4936856-understanding-and-counting-tokens" target="_blank" rel="noopener noreferrer">How tokenization works ↗</a> Use the reference dropdown in the right panel to translate every estimate into a familiar amount of text.</div>
               <div class="form-grid">
-                <label>Model calls <span class="field-desc">One or more invocations per task</span><input id="model-calls" type="number" min="1" max="1000" step="1"></label>
-                <label>Completed tasks / month <span class="field-desc">How often you repeat the whole task</span><input id="repeats" type="number" min="1" max="10000" step="1"></label>
-                <label>Average input tokens / call <span class="field-desc">Prompt + instructions + reused context</span><input id="input" type="number" min="0" max="1000000" step="50"></label>
-                <label>Visible output tokens / call <span class="field-desc">Text users can typically see</span><input id="output" type="number" min="0" max="1000000" step="50"></label>
-                <label>Cached input (%) <span class="field-desc">Context billed at a reduced rate</span><input id="cache" type="number" min="0" max="100" step="5"></label>
-                <label>Billable output multiplier <span class="field-desc">Additional unobserved reasoning tokens</span><input id="reasoning" type="number" min="1" max="10" step=".1"></label>
+                <label>Model calls<input id="model-calls" type="number" min="1" max="1000" step="1"></label>
+                <label>Completed tasks / month<input id="repeats" type="number" min="1" max="10000" step="1"></label>
+                <label>Average input tokens / call<input id="input" type="number" min="0" max="1000000" step="50"><small id="input-token-analogy" class="token-hint"></small></label>
+                <label>Visible output tokens / call<input id="output" type="number" min="0" max="1000000" step="50"><small id="output-token-analogy" class="token-hint"></small></label>
+                <label>Cached input (%)<input id="cache" type="number" min="0" max="100" step="5"></label>
+                <label>Billable output multiplier<input id="reasoning" type="number" min="1" max="10" step=".1"></label>
               </div>
               <div class="split-head"><h3>Estimated token composition</h3><span class="tag">Per completed task</span></div>
               <div id="token-bar" class="token-bar" role="img" aria-label="Token composition chart"></div>
               <div class="token-key"><span><i class="key-uncached"></i>Uncached input</span><span><i class="key-cached"></i>Cached input</span><span><i class="key-output"></i>Billed output</span></div>
-              <div class="stats-strip"><span><small>Total input</small><strong id="tokens-input">—</strong></span><span><small>Cached input</small><strong id="tokens-cached">—</strong></span><span><small>Billed output</small><strong id="tokens-output">—</strong></span><span><small>Extra output allowance</small><strong id="tokens-hidden">—</strong></span></div>
+              <div class="stats-strip">
+                <span><small>Total input</small><strong id="tokens-input">—</strong><em id="tokens-input-analogy" class="token-hint"></em></span>
+                <span><small>Cached input</small><strong id="tokens-cached">—</strong><em id="tokens-cached-analogy" class="token-hint"></em></span>
+                <span><small>Billed output</small><strong id="tokens-output">—</strong><em id="tokens-output-analogy" class="token-hint"></em></span>
+                <span><small>Extra output allowance</small><strong id="tokens-hidden">—</strong><em id="tokens-hidden-analogy" class="token-hint"></em></span>
+              </div>
               <div class="custom-box" id="custom-box" hidden><div class="split-head"><h3>Use your own text</h3><span class="tag">Browser only · not uploaded</span></div>
                 <div class="two-cols"><label>Prompt<textarea id="question-text" rows="3" placeholder="Paste the question or prompt"></textarea></label><label>Answer (optional)<textarea id="answer-text" rows="3" placeholder="Paste the AI answer"></textarea></label></div>
-                <label>Extra context allowance (tokens) <input id="context-tokens" type="number" min="0" max="100000" step="50" value="250"></label>
+                <label>Extra context allowance (tokens) <input id="context-tokens" type="number" min="0" max="100000" step="50" value="250"><small id="context-tokens-analogy" class="token-hint"></small></label>
                 <p class="muted note">Uses a rough 1 token ≈ 4 English characters heuristic. This is not the model's tokenizer and cannot reveal hidden context.</p>
               </div>
             </section>
@@ -142,11 +148,16 @@
               <div class="view-toggle" role="group" aria-label="Scale mode"><button id="scale-personal" class="toggle selected" data-mode="personal" type="button">Your monthly usage</button><button id="scale-company" class="toggle" data-mode="company" type="button">Company-wide scenario</button></div>
               <div id="personal-view">
                 <p class="muted intro">Repeat this completed task for a month, allocating the work across the selected plans or API provider. Paying a subscription is a fixed monthly cost, not a charge per message.</p>
+                <section class="comparison-panel" aria-labelledby="personal-chart-title">
+                  <div class="split-head"><h3 id="personal-chart-title">What you pay vs. equivalent AI costs</h3><span class="tag">Per month · common dollar scale</span></div>
+                  <div id="personal-comparison-chart" class="comparison-bars" role="img" aria-label="Subscription or API payment compared to equivalent API retail and modeled serving cost"></div>
+                  <div class="chart-note" id="personal-chart-explanation" aria-live="polite"></div>
+                </section>
                 <div class="figure-grid">
                   <div><small>Completed tasks / month</small><strong id="personal-tasks">—</strong></div><div><small>Model calls / month</small><strong id="personal-calls">—</strong></div>
                   <div><small id="personal-paid-label">What you pay / month</small><strong id="personal-subscription">—</strong></div><div><small>Equivalent API retail</small><strong id="personal-api">—</strong></div>
                   <div><small>Modeled serving total</small><strong id="personal-cost">—</strong></div><div><small>API retail equivalent minus amount paid</small><strong id="personal-margin">—</strong></div>
-                </div><p class="note muted">*API retail minus payment is a consumer comparison, not provider profit. Actual model routing, plan usage limits, external tools and bundled features can change the result.</p>
+                </div><div class="monthly-tokens"><small>Total task input + billable output (month)</small><strong id="personal-monthly-tokens">—</strong><span id="personal-monthly-analogy" class="token-hint"></span></div><p class="note muted">*API retail minus payment is a consumer comparison, not provider profit. Actual model routing, plan usage limits, external tools and bundled features can change the result.</p>
               </div>
               <div id="company-view" hidden>
                 <div class="info-card">This is a <strong>hypothetical provider-scale operation</strong>, not actual company spending. Adjust the number of users in each plan, their task frequency, and API customers. The result shows how modeled revenue might cover modeled capacity and overhead.</div>
@@ -165,6 +176,12 @@
                   <div><small>Other expense assumption</small><strong id="macro-extra">Not modeled</strong></div>
                   <div><small>Revenue less included expense</small><strong id="macro-balance">—</strong></div>
                 </div>
+                <section class="comparison-panel company-plot" aria-labelledby="company-chart-title">
+                  <div class="split-head"><h3 id="company-chart-title">Revenue vs. included expense</h3><span class="tag">Same period · common dollar scale</span></div>
+                  <div id="company-comparison-chart" class="comparison-bars" role="img" aria-label="Hypothetical company revenue and modeled expense, broken down by category"></div>
+                  <div class="chart-legend" id="company-chart-legend"></div>
+                  <p class="note muted">Revenue categories: subscriptions, assumed advertising, realized API billing. Expense categories: GPU infrastructure, modeled operations, optional other costs. These are two groups, <strong>not</strong> stacked into one grand total.</p>
+                </section>
                 <div class="coverage">
                   <div class="split-head"><h3>Can revenue offset modeled expense?</h3><strong id="macro-coverage">—</strong></div>
                   <div class="coverage-track"><div id="macro-coverage-fill"></div></div>
@@ -213,7 +230,20 @@
         <div class="insight-head"><span class="eyebrow">LIVE ESTIMATE</span><span class="signal"><span></span> Scenario</span></div>
         <div class="insight-profile"><small id="side-task-kind">MODELLED WORKLOAD</small><h2 id="side-task">Everyday question</h2><span id="side-provider" class="side-model">—</span></div>
         <div class="hero-metric"><div class="metric-title">MODELED TASK EXPENSE <span> / task</span></div><strong id="side-total">—</strong><small id="side-cost-label">Inference and operations only</small></div>
-        <div class="side-figures"><div><span>API retail equivalent</span><strong id="side-api">—</strong></div><div><span>Payment allocated per task</span><strong id="side-subscription">—</strong></div><div><span>Model calls in task</span><strong id="side-calls">—</strong></div><div><span>Token quantity (billed)</span><strong id="side-tokens">—</strong></div></div>
+        <div class="side-figures"><div><span>API retail equivalent</span><strong id="side-api">—</strong></div><div><span>Payment allocated per task</span><strong id="side-subscription">—</strong></div><div><span>Model calls in task</span><strong id="side-calls">—</strong></div><div><span>Total task text tokens</span><strong id="side-tokens">—</strong></div></div>
+        <div class="token-reference">
+          <label for="token-unit">Make token amounts tangible</label>
+          <select id="token-unit" aria-label="Reference unit for token quantities">
+            <option value="words">English words</option>
+            <option value="pages">Printed pages</option>
+            <option value="articles">Short articles</option>
+            <option value="novels">Typical novels</option>
+            <option value="odyssey" selected>Homer's Odyssey</option>
+            <option value="warpeace">War and Peace</option>
+          </select>
+          <strong id="side-tokens-analogy" class="token-value">—</strong>
+          <small id="token-unit-note">Approximate English-text comparison; not exact tokenization.</small>
+        </div>
         <div class="side-explain"><div class="explain-symbol">!</div><p id="side-disclaimer">Model-based scenario, not measured provider spending. External tool charges may be excluded.</p></div>
         <div class="side-actions"><button type="button" id="copy" class="subtle-button full">Copy estimate</button><button type="button" id="reset" class="text-button">Reset current example</button></div>
         <div class="side-bottom"><span>Reviewed baseline</span><strong id="reviewed">—</strong></div>
