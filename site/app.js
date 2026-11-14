@@ -324,9 +324,10 @@
     for(const plan of base){
       const isFree=plan.monthly_usd===0;
       const isMainPaid=plan.id===paidDefault;
-      const defaultUsers=isFree?prior.free_users:isMainPaid?prior.paid_users:0;
-      const defaultRate=isFree?prior.free_tasks_per_user:prior.paid_tasks_per_user;
-      const profileId=isFree?prior.free_profile:prior.paid_profile;
+      const demo=prior.tier_demo&&prior.tier_demo[plan.id];
+      const defaultUsers=demo?demo.users:(isFree?prior.free_users:isMainPaid?prior.paid_users:0);
+      const defaultRate=demo?demo.tasks_per_user:(isFree?prior.free_tasks_per_user:prior.paid_tasks_per_user);
+      const profileId=demo?demo.profile_id:(isFree?prior.free_profile:prior.paid_profile);
       const row=element("div","tier-editor");row.dataset.plan=plan.id;
       const head=element("div");head.append(element("h4","",plan.name),
         element("span","price-caption",money(plan.monthly_usd)+"/user/month"));
