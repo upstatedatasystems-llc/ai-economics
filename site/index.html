@@ -91,7 +91,11 @@
               <div class="cost-stack"><div class="cost-row"><span>Public API retail equivalent<small>Token rates × modeled calls</small></span><strong id="cost-api">—</strong></div>
                 <div class="cost-row"><span>Modeled GPU serving expense<small>Allocated compute capacity</small></span><strong id="cost-infra">—</strong></div>
                 <div class="cost-row"><span>Modeled operations / administration<small>Hypothetical personnel allocation</small></span><strong id="cost-ops">—</strong></div>
-                <div class="cost-row featured"><span>Serving-cost subtotal<small>Not actual provider expense</small></span><strong id="cost-total">—</strong></div></div>
+                <div class="cost-row"><span>External tools, CI, hosted execution<small>Unpriced unless explicitly entered</small></span><strong id="cost-tools">Unpriced</strong></div>
+                <div class="cost-row featured"><span>Included expense subtotal<small>Modeled expense plus any entered tools</small></span><strong id="cost-total">—</strong></div></div>
+              <div class="tool-entry"><label>Optional outside-tool expense / completed task (USD)
+                <input type="number" id="extra-tool-cost" min="0" max="100000" step=".01" placeholder="Unknown — exclude" />
+              </label><p class="note muted">Leave blank if unknown. The coding example includes 85 tool executions, but no measured execution fee. The sensitivity range below still covers model serving only.</p></div>
               <div class="split-head"><h3>Cost sensitivity</h3><span class="tag">Assumption range · not a confidence interval</span></div>
               <div class="range-row"><span><small>Optimistic</small><strong id="cost-low">—</strong></span><span><small>Baseline</small><strong id="cost-base">—</strong></span><span><small>Conservative</small><strong id="cost-high">—</strong></span></div>
               <details class="settings"><summary>Adjust infrastructure assumptions <span>Advanced</span></summary>
@@ -104,7 +108,7 @@
                   <label>Additional administration fraction<input id="corporate_overhead_fraction" type="number" min="0" max=".4" step=".05"></label>
                 </div>
               </details>
-              <div class="note muted">The modeled serving cost uses a shared hypothetical eight-GPU benchmark. It is <strong>not</strong> a measured internal infrastructure cost for the selected provider.</div>
+              <div class="note muted">The model serving subtotal uses a shared hypothetical eight-GPU benchmark. It is <strong>not</strong> a measured internal infrastructure cost for the selected provider.</div>
             </section>
             <section class="screen" data-screen="scale" aria-label="Explore scale" hidden>
               <div class="view-toggle" role="group" aria-label="Scale mode"><button id="scale-personal" class="toggle selected" data-mode="personal" type="button">Your monthly usage</button><button id="scale-company" class="toggle" data-mode="company" type="button">Company-wide scenario</button></div>
