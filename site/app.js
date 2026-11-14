@@ -272,6 +272,7 @@
     ]);
     text("macro-tasks",count(result.paid_tasks_month+result.free_tasks_month+result.api_tasks_month));
     text("macro-calls",count(result.total_model_calls_month));
+    text("macro-nodes",integer.format(Math.ceil(result.eight_gpu_systems_required)));
     document.querySelectorAll(".period-button").forEach(function(b){
       var active=b.dataset.period===currentPeriod;
       b.classList.toggle("selected",active);b.setAttribute("aria-pressed",active?"true":"false");
