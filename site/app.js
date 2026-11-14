@@ -279,7 +279,7 @@
     var period=result[currentPeriod];
     text("macro-revenue",amount(period.revenue));
     text("macro-serving",amount(period.serving_cost));
-    text("macro-extra",amount(period.other_expense));
+    text("macro-extra",period.other_expense===0?"Not modeled":amount(period.other_expense));
     text("macro-balance",amount(period.estimated_balance));
     bars("macro-revenue-bars",[
       ["Paid subscriptions",period.subscriptions,""],
