@@ -471,3 +471,8 @@ html,body,#app{background:#0f1215}
  .insight .token-reference select{flex:0 0 45%;min-width:0}
  .insight .token-reference .token-value{flex:1}
 }
+
+/* UI refinement: quieter explanatory controls, still keyboard-focusable. */
+.metric-info{width:16px;height:16px;min-width:16px;font-size:10px;border-width:1px;margin-left:3px}
+.field-heading .metric-info{margin-left:2px}
+@media(max-width:580px){.metric-info{width:15px;height:15px;min-width:15px;font-size:9px}}
